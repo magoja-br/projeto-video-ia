@@ -1,44 +1,41 @@
 # ============================
-# IGNORAR CREDENCIAIS SENSÍVEIS
+# IGNORAR CREDENCIAIS
 # ============================
 google-credentials.json
 backend/google-credentials.json
-*.pem
-*.key
-*.p12
 *.env
-.env.*
-secrets/
-credentials/
-*.json
+*.key
+*.pem
+*.p12
 
-# (Se quiser permitir JSON comuns, remova a linha acima)
+# ============================
+# IGNORAR JSON SENSÍVEIS
+# (Se quiser permitir JSON comuns, remova esta linha)
+# ============================
+*.json
 
 # ============================
 # PYTHON
 # ============================
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
 
 # Virtual environments
 venv/
 env/
-ENV/
 .venv/
-.venv*/
-pip-wheel-metadata/
-pip-log.txt
+ENV/
 
-# Distribuição / build
+# Build / distribuição
 build/
 dist/
 *.egg-info/
 .eggs/
 
 # ============================
-# FLASK / CACHE
+# FLASK
 # ============================
 instance/
 *.db
@@ -51,16 +48,12 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-dist/
-build/
 
 # ============================
-# VS CODE / EDITORES
+# EDITORES
 # ============================
 .vscode/
 .idea/
-*.swp
-*.swo
 
 # ============================
 # SISTEMA OPERACIONAL
