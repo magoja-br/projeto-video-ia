@@ -1,5 +1,5 @@
 # ============================
-# IGNORAR CREDENCIAIS
+# CREDENCIAIS (NÃO SUBIR)
 # ============================
 google-credentials.json
 backend/google-credentials.json
@@ -9,7 +9,7 @@ backend/google-credentials.json
 *.p12
 
 # ============================
-# IGNORAR JSON SENSÍVEIS
+# JSON SENSÍVEIS
 # (Se quiser permitir JSON comuns, remova esta linha)
 # ============================
 *.json
@@ -22,7 +22,7 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Virtual environments
+# Ambientes virtuais
 venv/
 env/
 .venv/
@@ -42,7 +42,7 @@ instance/
 *.sqlite3
 
 # ============================
-# NODE / FRONT-END
+# FRONT-END
 # ============================
 node_modules/
 npm-debug.log*
