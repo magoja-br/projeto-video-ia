@@ -1,4 +1,7 @@
-flask
-flask-cors
-google-cloud-aiplatform
-gunicorn
+Flask==3.0.2
+Flask-Cors==4.0.0
+google-cloud-aiplatform==1.49.0
+google-auth==2.29.0
+google-auth-oauthlib==1.2.0
+protobuf==4.25.3
+requests==2.31.0
