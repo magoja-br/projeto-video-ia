@@ -1,4 +1,5 @@
 import os
+import sys
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import vertexai
@@ -6,26 +7,31 @@ import vertexai
 # Tenta importar de diferentes caminhos para evitar o ImportError
 try:
     from vertexai.vision_models import ImageVideoModel
+    print("LOG: Importado de vertexai.vision_models")
 except ImportError:
     try:
         from vertexai.preview.vision_models import ImageVideoModel
+        print("LOG: Importado de vertexai.preview.vision_models")
     except ImportError:
         ImageVideoModel = None
+        print("LOG: ERRO - Nao foi possivel importar ImageVideoModel")
 
 app = Flask(__name__)
 
-# AJUSTE 1: Configuração de CORS mais forte para evitar "Erro ao conectar"
+# Configuração de CORS para aceitar qualquer origem
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # --- 1. CONFIGURAÇÃO DE PORTA ---
 port = int(os.environ.get("PORT", 10000))
 
-# --- 2. CREDENCIAIS ---
+# --- 2. CONFIGURAÇÃO DE CREDENCIAIS (DIAGNÓSTICO MELHORADO) ---
 render_secret_path = "/etc/secrets/google-credentials.json"
 if os.path.exists(render_secret_path):
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = render_secret_path
+    print(f"LOG: Chave de segredo encontrada em {render_secret_path}")
 else:
-    # Se rodar local, tenta a pasta raiz ou a pasta backend
+    print("LOG: Chave de segredo NAO encontrada no caminho do Render.")
+    # Fallback local
     if os.path.exists("chave-google.json"):
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "chave-google.json"
     elif os.path.exists("../chave-google.json"):
@@ -35,16 +41,20 @@ else:
 PROJECT_ID = os.environ.get("PROJECT_ID", "gerador-de-imagens-ai") 
 LOCATION = os.environ.get("LOCATION", "us-central1")
 
-vertexai.init(project=PROJECT_ID, location=LOCATION)
+print(f"LOG: Iniciando Vertex AI no projeto {PROJECT_ID} em {LOCATION}")
 
-# Inicializa o modelo
 model = None
-if ImageVideoModel:
-    try:
-        # Usando o modelo imagen-video (verifique se sua conta tem acesso a este modelo)
+try:
+    vertexai.init(project=PROJECT_ID, location=LOCATION)
+    if ImageVideoModel:
+        # Tentamos carregar o modelo
         model = ImageVideoModel.from_pretrained("imagen-video")
-    except Exception as e:
-        print(f"Erro ao carregar modelo: {e}")
+        print("LOG: Modelo Imagen Video carregado com SUCESSO!")
+    else:
+        print("LOG: Modelo nao carregado porque a importacao falhou anteriormente.")
+except Exception as e:
+    print(f"LOG ERRO CRITICO AO CARREGAR MODELO: {str(e)}")
+    model = None
 
 # Pasta para salvar os vídeos
 OUTPUT_FOLDER = os.path.join(os.getcwd(), "static")
@@ -53,39 +63,43 @@ if not os.path.exists(OUTPUT_FOLDER):
 
 @app.route('/')
 def home():
-    return jsonify({"status": "online", "message": "Servidor de Video IA pronto!"})
+    status_ia = "CARREGADO" if model else "NAO CARREGADO"
+    return jsonify({
+        "status": "online", 
+        "ia_model": status_ia,
+        "project_id": PROJECT_ID,
+        "location": LOCATION
+    })
 
 @app.route('/generate', methods=['POST'])
 def generate():
     if not model:
-        return jsonify({"error": "Modelo de video nao carregado. Verifique as credenciais e APIs."}), 500
+        return jsonify({
+            "error": "Modelo de video nao carregado no servidor.",
+            "dica": "Verifique os logs do Render para ver o erro do Google Cloud."
+        }), 500
         
     data = request.json
-    if not data:
-        return jsonify({"error": "JSON invalido"}), 400
-        
-    prompt = data.get('prompt')
+    prompt = data.get('prompt') if data else None
+    
     if not prompt: 
         return jsonify({"error": "Digite um prompt!"}), 400
         
     try:
-        # AJUSTE 2: Geração do vídeo
-        # Nota: O processamento pode demorar até 2 minutos no Vertex
+        print(f"LOG: Gerando video para o prompt: {prompt}")
         video = model.generate_video(prompt=prompt)
         
         filename = "clip_resultado.mp4"
         filepath = os.path.join(OUTPUT_FOLDER, filename)
         
-        # Salva o vídeo no servidor
         video.save(location=filepath)
         
-        # Retorna a URL (O Render vai servir via rota /static/)
         return jsonify({
             "success": True,
             "video_url": f"/static/{filename}"
         })
     except Exception as e:
-        print(f"Erro interno: {str(e)}")
+        print(f"LOG ERRO NA GERACAO: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/static/<path:path>')
@@ -93,5 +107,4 @@ def send_static(path):
     return send_from_directory(OUTPUT_FOLDER, path)
 
 if __name__ == '__main__':
-    # AJUSTE 3: 0.0.0.0 é obrigatório para o Render enxergar o Flask
     app.run(host='0.0.0.0', port=port)
