@@ -1,3 +1,4 @@
 flask
 flask-cors
 google-cloud-aiplatform
+gunicorn
