@@ -2,31 +2,44 @@ import os
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import vertexai
-# Importação para geração de VÍDEO (ajustada para Vertex AI)
-from vertexai.vision_models import ImageVideoModel
+
+# Tenta importar de diferentes caminhos para evitar o ImportError
+try:
+    from vertexai.generative_models import GenerativeModel
+    # Para modelos de vídeo mais recentes (como o Veo ou Imagen Video)
+    from vertexai.vision_models import ImageVideoModel
+except ImportError:
+    try:
+        from vertexai.preview.vision_models import ImageVideoModel
+    except ImportError:
+        ImageVideoModel = None
 
 app = Flask(__name__)
 CORS(app)
 
-# --- 1. CONFIGURAÇÃO DE PORTA (CORRIGE O ERRO DO RENDER) ---
-# O Render passa a porta 10000 automaticamente por aqui
+# --- 1. CONFIGURAÇÃO DE PORTA (CORRIGE O ERRO DE PORTA) ---
 port = int(os.environ.get("PORT", 5000))
 
-# --- 2. CONFIGURAÇÃO DE CREDENCIAIS ---
+# --- 2. CREDENCIAIS ---
 render_secret_path = "/etc/secrets/google-credentials.json"
 if os.path.exists(render_secret_path):
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = render_secret_path
 else:
-    # Se rodar local, procura o arquivo na sua pasta
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "chave-google.json"
 
 # --- 3. INICIALIZAÇÃO VERTEX AI ---
-# Pega o ID que você salvou no painel 'Environment' do Render
 PROJECT_ID = os.environ.get("PROJECT_ID", "gerador-de-imagens-ai") 
 LOCATION = os.environ.get("LOCATION", "us-central1")
 
 vertexai.init(project=PROJECT_ID, location=LOCATION)
-model = ImageVideoModel.from_pretrained("imagen-video")
+
+# Inicializa o modelo com segurança
+model = None
+if ImageVideoModel:
+    try:
+        model = ImageVideoModel.from_pretrained("imagen-video")
+    except Exception as e:
+        print(f"Erro ao carregar modelo: {e}")
 
 OUTPUT_FOLDER = "static"
 if not os.path.exists(OUTPUT_FOLDER):
@@ -34,16 +47,18 @@ if not os.path.exists(OUTPUT_FOLDER):
 
 @app.route('/')
 def home():
-    return "Servidor de Vídeo Online!"
+    return "Servidor de Vídeo Online e Porta Configurada!"
 
 @app.route('/generate', methods=['POST'])
 def generate():
+    if not model:
+        return jsonify({"error": "Modelo de vídeo não disponível nesta região ou versão."}), 500
+        
     data = request.json
     prompt = data.get('prompt')
     if not prompt: 
         return jsonify({"error": "Digite um prompt!"}), 400
     try:
-        # Gera o vídeo
         video = model.generate_video(prompt=prompt)
         filename = "clip_resultado.mp4"
         filepath = os.path.join(OUTPUT_FOLDER, filename)
@@ -57,5 +72,5 @@ def send_static(path):
     return send_from_directory(OUTPUT_FOLDER, path)
 
 if __name__ == '__main__':
-    # Roda na porta correta para o Render não dar erro
+    # O host '0.0.0.0' e a porta variável são fundamentais no Render
     app.run(host='0.0.0.0', port=port)
