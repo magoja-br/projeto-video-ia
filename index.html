@@ -3,155 +3,377 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Clip Generator</title>
+    <title>AI Clip Generator – Crie vídeos com IA</title>
+    <meta name="description" content="Gere clipes de vídeo incríveis com Inteligência Artificial do Google usando apenas uma descrição de texto.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
-        body { background: #0f0f0f; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .container { text-align: center; width: 90%; max-width: 500px; }
-        h1 { font-size: 2.5rem; color: #ff4b2b; margin-bottom: 5px; }
-        p { color: #888; margin-bottom: 30px; }
-        .card { background: #1a1a1a; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #333; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:        #0b0b0f;
+            --surface:   #13131a;
+            --border:    #2a2a3a;
+            --accent1:   #ff4b2b;
+            --accent2:   #ff416c;
+            --text:      #e8e8f0;
+            --muted:     #6b6b80;
+            --radius:    14px;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        /* ── Fundo animado ── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 60% 40% at 20% 10%, rgba(255,75,43,.12) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 35% at 80% 90%, rgba(255,65,108,.10) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 520px;
+            text-align: center;
+        }
+
+        /* ── Header ── */
+        .header-icon { font-size: 3rem; margin-bottom: 8px; line-height: 1; }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ff4b2b 0%, #ff416c 50%, #ff9a6c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            font-size: 0.95rem;
+            margin-bottom: 32px;
+        }
+
+        /* ── Card ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 24px 60px rgba(0,0,0,.6);
+        }
+
+        /* ── Inputs ── */
         .input-group { text-align: left; margin-bottom: 20px; }
-        .input-group label { display: block; margin-bottom: 8px; color: #bbb; font-size: 0.9rem; }
-        input, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #252525; color: white; box-sizing: border-box; outline: none; }
-        button { width: 100%; padding: 15px; border-radius: 10px; border: none; background: linear-gradient(45deg, #ff4b2b, #ff416c); color: white; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.3s; }
-        button:hover { transform: scale(1.02); filter: brightness(1.1); }
-        .hidden { display: none; }
 
-        #result video { width: 100%; border-radius: 15px; margin-top: 20px; border: 2px solid #ff4b2b; }
+        label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-bottom: 8px;
+        }
 
-        .loader { border: 4px solid #333; border-top: 4px solid #ff4b2b; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        input[type="text"], select {
+            width: 100%;
+            padding: 13px 16px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: #0f0f18;
+            color: var(--text);
+            font-size: 0.95rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        input[type="text"]:focus, select:focus {
+            border-color: var(--accent1);
+            box-shadow: 0 0 0 3px rgba(255,75,43,.15);
+        }
+
+        select option { background: #13131a; }
+
+        /* ── Botão principal ── */
+        #btn-gerar {
+            width: 100%;
+            padding: 15px;
+            border-radius: var(--radius);
+            border: none;
+            background: linear-gradient(135deg, #ff4b2b, #ff416c);
+            color: #fff;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform .2s, filter .2s, box-shadow .2s;
+            box-shadow: 0 8px 24px rgba(255,65,108,.3);
+        }
+
+        #btn-gerar:hover:not(:disabled) {
+            transform: translateY(-2px);
+            filter: brightness(1.12);
+            box-shadow: 0 12px 30px rgba(255,65,108,.45);
+        }
+
+        #btn-gerar:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+        /* ── Loading ── */
+        #loading { margin-top: 28px; }
+
+        .spinner-wrap { display: flex; justify-content: center; margin-bottom: 16px; }
+
+        .spinner {
+            width: 44px; height: 44px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent1);
+            border-radius: 50%;
+            animation: spin .9s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #status-msg {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 12px;
+        }
 
         .progress-bar {
-            width: 100%;
-            height: 10px;
-            background: #333;
-            border-radius: 10px;
-            margin-top: 10px;
+            width: 100%; height: 8px;
+            background: var(--border);
+            border-radius: 99px;
             overflow: hidden;
         }
+
         .progress-fill {
             height: 100%;
             width: 0%;
-            background: linear-gradient(45deg, #ff4b2b, #ff416c);
-            transition: width 0.3s ease;
+            background: linear-gradient(90deg, #ff4b2b, #ff416c);
+            border-radius: 99px;
+            transition: width .4s ease;
         }
 
-        .btn-reset { background: #333; margin-top: 20px; }
+        #progress-pct {
+            font-size: 0.78rem;
+            color: var(--muted);
+            margin-top: 6px;
+            text-align: right;
+        }
+
+        /* ── Resultado ── */
+        #result { margin-top: 28px; }
+
+        #result video {
+            width: 100%;
+            border-radius: var(--radius);
+            border: 2px solid var(--accent1);
+            box-shadow: 0 0 30px rgba(255,75,43,.25);
+        }
+
+        #btn-reset {
+            width: 100%;
+            margin-top: 16px;
+            padding: 13px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            font-family: inherit;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background .2s, color .2s;
+        }
+
+        #btn-reset:hover { background: var(--border); color: var(--text); }
+
+        /* ── Erro ── */
+        .error-box {
+            margin-top: 20px;
+            background: rgba(255,75,43,.1);
+            border: 1px solid rgba(255,75,43,.3);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            font-size: 0.88rem;
+            color: #ff8070;
+            text-align: left;
+        }
+
+        /* ── Utilitários ── */
+        .hidden { display: none !important; }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <h1>🎬 Clip Generator</h1>
-        <p>Crie clipes rápidos com a IA do Google Cloud</p>
+<div class="container">
+    <div class="header-icon">🎬</div>
+    <h1>Clip Generator</h1>
+    <p class="subtitle">Crie clipes com a IA de vídeo do Google</p>
 
-        <div class="card">
-            <div class="input-group">
-                <label>O que deve acontecer no clipe?</label>
-                <input type="text" id="prompt" placeholder="Ex: Uma onda gigante quebrando em câmera lenta...">
-            </div>
-
-            <div class="input-group">
-                <label>Duração do clipe:</label>
-                <select id="duration">
-                    <option value="4">4 Segundos</option>
-                    <option value="5">5 Segundos</option>
-                    <option value="6">6 Segundos</option>
-                    <option value="10">10 Segundos</option>
-                </select>
-            </div>
-
-            <button onclick="generateVideo()" id="btn">Gerar Clipe</button>
+    <div class="card">
+        <div class="input-group">
+            <label for="prompt">Descreva o clipe</label>
+            <input
+                type="text"
+                id="prompt"
+                placeholder="Ex: Uma onda gigante em câmera lenta, 4K realista..."
+                autocomplete="off"
+            >
         </div>
 
-        <div id="loading" class="hidden">
-            <div class="loader"></div>
-            <p id="statusText">Iniciando...</p>
-
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-
-            <p id="progressText">0%</p>
+        <div class="input-group">
+            <label for="duration">Duração</label>
+            <select id="duration">
+                <option value="4">4 Segundos</option>
+                <option value="5">5 Segundos</option>
+                <option value="6">6 Segundos</option>
+                <option value="8">8 Segundos</option>
+            </select>
         </div>
 
-        <div id="result" class="hidden">
-            <video id="videoPlayer" controls loop></video>
-            <button onclick="reset()" class="btn-reset">Criar Outro</button>
-        </div>
+        <button id="btn-gerar" onclick="iniciarGeracao()">✨ Gerar Clipe</button>
     </div>
 
+    <!-- Loading -->
+    <div id="loading" class="hidden">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+        <p id="status-msg">Iniciando...</p>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <p id="progress-pct">0%</p>
+    </div>
+
+    <!-- Erro -->
+    <div id="error-box" class="error-box hidden"></div>
+
+    <!-- Resultado -->
+    <div id="result" class="hidden">
+        <video id="video-player" controls loop playsinline></video>
+        <button id="btn-reset" onclick="resetar()">↩ Criar outro clipe</button>
+    </div>
+</div>
+
 <script>
-    async function generateVideo() {
-        const prompt = document.getElementById('prompt').value;
+    const API = 'https://projeto-video-ia.onrender.com';
+
+    let pollingTimer = null;
+
+    // ── Helpers de UI ──────────────────────────────────────────────────────
+    function setProgress(pct, msg) {
+        document.getElementById('progress-fill').style.width = pct + '%';
+        document.getElementById('progress-pct').textContent = Math.floor(pct) + '%';
+        if (msg) document.getElementById('status-msg').textContent = msg;
+    }
+
+    function mostrarErro(msg) {
+        const box = document.getElementById('error-box');
+        box.textContent = '❌ ' + msg;
+        box.classList.remove('hidden');
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('btn-gerar').disabled = false;
+    }
+
+    function resetar() {
+        document.getElementById('result').classList.add('hidden');
+        document.getElementById('error-box').classList.add('hidden');
+        document.getElementById('prompt').value = '';
+        document.getElementById('btn-gerar').disabled = false;
+    }
+
+    // ── Início ─────────────────────────────────────────────────────────────
+    async function iniciarGeracao() {
+        const prompt   = document.getElementById('prompt').value.trim();
         const duration = document.getElementById('duration').value;
-        const btn = document.getElementById('btn');
-        const loading = document.getElementById('loading');
-        const result = document.getElementById('result');
-        const videoPlayer = document.getElementById('videoPlayer');
 
-        const statusText = document.getElementById("statusText");
-        const progressText = document.getElementById("progressText");
-        const progressFill = document.getElementById("progressFill");
+        if (!prompt) {
+            alert('Por favor, descreva o clipe antes de gerar!');
+            return;
+        }
 
-        if (!prompt) return alert("Por favor, digite o prompt!");
-
-        btn.disabled = true;
-        loading.classList.remove('hidden');
-        result.classList.add('hidden');
-
-        let progress = 0;
-
-        // Progresso animado
-        const interval = setInterval(() => {
-            progress += Math.random() * 7;
-            if (progress > 95) progress = 95;
-
-            progressFill.style.width = progress + "%";
-            progressText.textContent = Math.floor(progress) + "%";
-
-            if (progress < 30) statusText.textContent = "Preparando modelo...";
-            else if (progress < 60) statusText.textContent = "Gerando frames...";
-            else if (progress < 90) statusText.textContent = "Renderizando vídeo...";
-            else statusText.textContent = "Finalizando...";
-        }, 500);
+        // Reset visual
+        document.getElementById('btn-gerar').disabled = true;
+        document.getElementById('loading').classList.remove('hidden');
+        document.getElementById('result').classList.add('hidden');
+        document.getElementById('error-box').classList.add('hidden');
+        setProgress(5, 'Conectando ao servidor...');
 
         try {
-            const response = await fetch('https://projeto-video-ia.onrender.com/generate', {
+            const res = await fetch(`${API}/generate`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ prompt, duration })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt, duration }),
             });
 
-            const data = await response.json();
-            clearInterval(interval);
+            const data = await res.json();
 
-            if (data.video_url) {
-                progressFill.style.width = "100%";
-                progressText.textContent = "100%";
-                statusText.textContent = "Concluído!";
-
-                videoPlayer.src = `https://projeto-video-ia.onrender.com${data.video_url}`;
-                result.classList.remove('hidden');
-            } else {
-                alert("Erro: " + data.error);
+            if (!res.ok || data.error) {
+                mostrarErro(data.error || 'Erro ao iniciar a geração.');
+                return;
             }
 
+            // Começa polling
+            setProgress(10, 'Solicitação enviada! Aguardando IA...');
+            aguardarJob(data.job_id);
+
         } catch (e) {
-            alert("Erro ao conectar com o servidor!");
-        } finally {
-            btn.disabled = false;
-            loading.classList.add('hidden');
+            mostrarErro('Não foi possível conectar ao servidor. Verifique se o backend está online.');
         }
     }
 
-    function reset() {
-        document.getElementById('result').classList.add('hidden');
-        document.getElementById('prompt').value = '';
+    // ── Polling ────────────────────────────────────────────────────────────
+    function aguardarJob(jobId) {
+        pollingTimer = setInterval(async () => {
+            try {
+                const res  = await fetch(`${API}/status/${jobId}`);
+                const data = await res.json();
+
+                if (data.status === 'done') {
+                    clearInterval(pollingTimer);
+                    setProgress(100, 'Concluído!');
+
+                    setTimeout(() => {
+                        document.getElementById('loading').classList.add('hidden');
+                        const player = document.getElementById('video-player');
+                        player.src = `${API}${data.video_url}`;
+                        document.getElementById('result').classList.remove('hidden');
+                    }, 600);
+
+                } else if (data.status === 'error') {
+                    clearInterval(pollingTimer);
+                    mostrarErro(data.error || 'Ocorreu um erro na geração.');
+
+                } else {
+                    // processing | queued
+                    setProgress(data.progress || 10, data.message || 'Processando...');
+                }
+
+            } catch (e) {
+                clearInterval(pollingTimer);
+                mostrarErro('Perda de conexão ao verificar o status do job.');
+            }
+        }, 4000); // verifica a cada 4 segundos
     }
 </script>
-
 </body>
 </html>
