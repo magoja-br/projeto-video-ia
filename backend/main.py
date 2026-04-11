@@ -28,6 +28,11 @@ PREDICT_URL = (
     f"/locations/{LOCATION}/publishers/google/models/{MODEL}:predictLongRunning"
 )
 
+FETCH_URL = (
+    f"{API_BASE}/v1/projects/{PROJECT_ID}"
+    f"/locations/{LOCATION}/publishers/google/models/{MODEL}:fetchPredictOperation"
+)
+
 # Armazena jobs em memória
 jobs: dict = {}
 
@@ -80,7 +85,6 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
 
         print(f"[JOB {job_id}] Prompt: {prompt[:100]}")
         print(f"[JOB {job_id}] Params: duration={duration}, ratio={aspect_ratio}, model={MODEL}")
-        print(f"[JOB {job_id}] URL: {PREDICT_URL}")
 
         resp = req.post(
             PREDICT_URL,
@@ -103,25 +107,15 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
             return
 
         resp_data = resp.json()
-        print(f"[JOB {job_id}] Resposta completa: {json.dumps(resp_data, indent=2)[:800]}")
-
         operation_name = resp_data.get("name")
         if not operation_name:
             print(f"[JOB {job_id}] Sem operation name. Resposta: {resp.text[:500]}")
             jobs[job_id] = {"status": "error",
-                            "error": "API não retornou nome da operação.",
-                            "debug_response": resp.text[:500]}
+                            "error": "API não retornou nome da operação."}
             return
 
         print(f"[JOB {job_id}] Operation name: {operation_name}")
-
-        # Salva debug info no job para poder consultar via /status
-        jobs[job_id].update({
-            "progress": 30,
-            "message": "Gerando vídeo com IA...",
-            "debug_operation_name": operation_name,
-            "debug_initial_response": json.dumps(resp_data)[:500],
-        })
+        jobs[job_id].update({"progress": 30, "message": "Gerando vídeo com IA..."})
 
         # ── 2. Polling da operação ────────────────────────────────────────
         # O Vertex AI Veo usa POST :fetchPredictOperation para polling.
@@ -130,13 +124,7 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
         # Endpoint: POST .../models/{MODEL}:fetchPredictOperation
         # Body:     { "operationName": "<operation_name completo>" }
 
-        fetch_url = (
-            f"{API_BASE}/v1/projects/{PROJECT_ID}/locations/{LOCATION}"
-            f"/publishers/google/models/{MODEL}:fetchPredictOperation"
-        )
-
-        jobs[job_id]["debug_fetch_url"] = fetch_url
-        print(f"[JOB {job_id}] Fetch URL: {fetch_url}")
+        print(f"[JOB {job_id}] Fetch URL: {FETCH_URL}")
 
         max_tentativas = 180  # ~15 minutos (180 × 5s)
 
@@ -150,7 +138,7 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
 
             try:
                 poll_resp = req.post(
-                    fetch_url,
+                    FETCH_URL,
                     headers={
                         "Authorization": f"Bearer {token}",
                         "Content-Type": "application/json",
@@ -160,13 +148,8 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
                 )
             except Exception as poll_err:
                 print(f"[JOB {job_id}] Erro de conexão no polling (tentativa {i+1}): {poll_err}")
-                jobs[job_id].update({"message": "Reconectando...", "debug_last_error": str(poll_err)})
+                jobs[job_id].update({"message": "Reconectando..."})
                 continue
-
-            # Salva info de debug
-            jobs[job_id]["debug_last_poll_status"] = poll_resp.status_code
-            jobs[job_id]["debug_last_poll_response"] = poll_resp.text[:300]
-            jobs[job_id]["debug_poll_attempt"] = i + 1
 
             if poll_resp.status_code != 200:
                 print(f"[JOB {job_id}] Polling HTTP {poll_resp.status_code} (tentativa {i+1}): {poll_resp.text[:200]}")
@@ -189,7 +172,6 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
             jobs[job_id].update({"progress": pct, "message": msg})
 
             if not poll_data.get("done"):
-                # Log a cada 12 tentativas (~1 min)
                 if i % 12 == 0:
                     print(f"[JOB {job_id}] Ainda processando... (tentativa {i+1}, {pct}%)")
                 continue
@@ -197,19 +179,11 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
             # ── 3. Operação concluída ─────────────────────────────────────
             print(f"[JOB {job_id}] Operação concluída! (tentativa {i+1})")
 
-            # Salva resposta completa para debug
-            jobs[job_id]["debug_final_response"] = json.dumps(poll_data)[:2000]
-            jobs[job_id]["debug_final_keys"] = list(poll_data.keys())
-
             if poll_data.get("error"):
                 err = poll_data["error"]
                 err_msg = err.get("message", "Erro desconhecido da API.")
                 print(f"[JOB {job_id}] ERRO da API: {err_msg}")
-                jobs[job_id] = {
-                    "status": "error",
-                    "error": err_msg,
-                    "debug_final_response": json.dumps(poll_data)[:2000],
-                }
+                jobs[job_id] = {"status": "error", "error": err_msg}
                 return
 
             # Tenta extrair predictions de múltiplos formatos possíveis
@@ -219,7 +193,6 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
                 or poll_data.get("result", {}).get("predictions", [])
             )
 
-            # Se ainda não encontrou, procura videos
             if not predictions:
                 predictions = (
                     poll_data.get("response", {}).get("videos", [])
@@ -228,13 +201,9 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
                 )
 
             if not predictions:
-                print(f"[JOB {job_id}] Sem predictions. Resposta: {json.dumps(poll_data, indent=2)[:1000]}")
-                jobs[job_id] = {
-                    "status": "error",
-                    "error": "API não retornou nenhum vídeo.",
-                    "debug_final_response": json.dumps(poll_data)[:2000],
-                    "debug_final_keys": list(poll_data.keys()),
-                }
+                print(f"[JOB {job_id}] Sem predictions. Keys: {list(poll_data.keys())}")
+                jobs[job_id] = {"status": "error",
+                                "error": "API não retornou nenhum vídeo."}
                 return
 
             pred = predictions[0]
@@ -283,10 +252,10 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
                 else:
                     print(f"[JOB {job_id}] Erro ao baixar GCS: HTTP {gcs_resp.status_code}")
 
-            print(f"[JOB {job_id}] Formato desconhecido: {json.dumps(pred, indent=2)[:500]}")
+            print(f"[JOB {job_id}] Formato desconhecido: {str(pred)[:500]}")
             jobs[job_id] = {
                 "status": "error",
-                "error": "Formato de resposta desconhecido. Dados: " + str(pred)[:300],
+                "error": "Formato de resposta desconhecido.",
             }
             return
 
@@ -310,56 +279,11 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
 def health():
     return jsonify({
         "status": "online",
-        "version": "3.1.0",
+        "version": "3.2.0",
         "project_id": PROJECT_ID,
         "location": LOCATION,
         "ia_model": MODEL,
     })
-
-
-@app.route("/test-auth", methods=["GET"])
-def test_auth():
-    """
-    Testa autenticação e conectividade com a API Vertex AI
-    SEM gerar vídeo (não consome créditos).
-    """
-    resultado = {"version": "2.0.0"}
-
-    # 1. Testar autenticação
-    try:
-        token = get_token()
-        resultado["auth"] = "ok"
-        resultado["token_preview"] = token[:20] + "..."
-    except Exception as e:
-        resultado["auth"] = "error"
-        resultado["auth_error"] = str(e)
-        return jsonify(resultado), 500
-
-    # 2. Testar acesso ao endpoint (OPTIONS/GET simples, não POST)
-    try:
-        test_url = (
-            f"{API_BASE}/v1/projects/{PROJECT_ID}"
-            f"/locations/{LOCATION}/publishers/google/models/{MODEL}"
-        )
-        resp = req.get(
-            test_url,
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=15,
-        )
-        resultado["api_access"] = f"HTTP {resp.status_code}"
-        resultado["api_url_tested"] = test_url
-        if resp.status_code != 200:
-            resultado["api_response"] = resp.text[:300]
-    except Exception as e:
-        resultado["api_access"] = "error"
-        resultado["api_error"] = str(e)
-
-    # 3. Montar a URL de polling que seria usada (para debug)
-    fake_op = f"projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{MODEL}/operations/FAKE-ID"
-    resultado["poll_url_format"] = f"{API_BASE}/v1/{fake_op}"
-    resultado["predict_url"] = PREDICT_URL
-
-    return jsonify(resultado)
 
 
 @app.route("/generate", methods=["POST"])
