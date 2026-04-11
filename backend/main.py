@@ -124,23 +124,19 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
         })
 
         # ── 2. Polling da operação ────────────────────────────────────────
-        # Tenta múltiplos formatos para descobrir qual funciona
-        poll_urls_to_try = [
-            f"{API_BASE}/v1/{operation_name}",
-            f"{API_BASE}/v1beta1/{operation_name}",
-        ]
-        # Também tenta o path simplificado
-        if "/operations/" in operation_name:
-            op_id = operation_name.split("/operations/")[-1]
-            poll_urls_to_try.append(
-                f"{API_BASE}/v1/projects/{PROJECT_ID}/locations/{LOCATION}/operations/{op_id}"
-            )
+        # O Vertex AI Veo usa POST :fetchPredictOperation para polling.
+        # NÃO usa GET no operation URL (isso retorna 404).
+        #
+        # Endpoint: POST .../models/{MODEL}:fetchPredictOperation
+        # Body:     { "operationName": "<operation_name completo>" }
 
-        jobs[job_id]["debug_poll_urls"] = poll_urls_to_try
-        print(f"[JOB {job_id}] Poll URLs a testar: {poll_urls_to_try}")
+        fetch_url = (
+            f"{API_BASE}/v1/projects/{PROJECT_ID}/locations/{LOCATION}"
+            f"/publishers/google/models/{MODEL}:fetchPredictOperation"
+        )
 
-        # Descobre qual URL funciona
-        poll_url = None
+        jobs[job_id]["debug_fetch_url"] = fetch_url
+        print(f"[JOB {job_id}] Fetch URL: {fetch_url}")
 
         max_tentativas = 180  # ~15 minutos (180 × 5s)
 
@@ -152,41 +148,14 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
                 token = get_token()
                 print(f"[JOB {job_id}] Token renovado (tentativa {i+1})")
 
-            # Na primeira iteração, tenta todas as URLs para descobrir qual funciona
-            if poll_url is None:
-                for candidate_url in poll_urls_to_try:
-                    try:
-                        test_resp = req.get(
-                            candidate_url,
-                            headers={"Authorization": f"Bearer {token}"},
-                            timeout=30,
-                        )
-                        print(f"[JOB {job_id}] Testando {candidate_url} -> HTTP {test_resp.status_code}")
-                        jobs[job_id][f"debug_url_result_{poll_urls_to_try.index(candidate_url)}"] = f"HTTP {test_resp.status_code}"
-
-                        if test_resp.status_code == 200:
-                            poll_url = candidate_url
-                            print(f"[JOB {job_id}] ✅ URL de polling encontrada: {candidate_url}")
-                            jobs[job_id]["debug_poll_url_used"] = candidate_url
-                            break
-                    except Exception as e:
-                        print(f"[JOB {job_id}] Erro ao testar {candidate_url}: {e}")
-                        jobs[job_id][f"debug_url_result_{poll_urls_to_try.index(candidate_url)}"] = f"ERROR: {e}"
-
-                if poll_url is None:
-                    # Nenhuma URL funcionou, salva debug e continua tentando a primeira
-                    jobs[job_id]["debug_last_error"] = "Nenhuma URL de polling funcionou na tentativa 1"
-                    print(f"[JOB {job_id}] ⚠️ Nenhuma URL funcionou! Vai tentar novamente...")
-                    # Usa a primeira como fallback
-                    poll_url = poll_urls_to_try[0]
-                    jobs[job_id]["debug_poll_url_used"] = f"{poll_url} (fallback)"
-                    continue
-
-            # Polling normal com a URL que funcionou
             try:
-                poll_resp = req.get(
-                    poll_url,
-                    headers={"Authorization": f"Bearer {token}"},
+                poll_resp = req.post(
+                    fetch_url,
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "Content-Type": "application/json",
+                    },
+                    json={"operationName": operation_name},
                     timeout=30,
                 )
             except Exception as poll_err:
@@ -321,7 +290,7 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
 def health():
     return jsonify({
         "status": "online",
-        "version": "2.1.0",
+        "version": "3.0.0",
         "project_id": PROJECT_ID,
         "location": LOCATION,
         "ia_model": MODEL,
