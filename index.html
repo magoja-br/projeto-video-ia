@@ -589,42 +589,63 @@
         document.getElementById('loading').classList.remove('hidden');
         document.getElementById('result').classList.add('hidden');
         document.getElementById('error-box').classList.add('hidden');
-        setProgress(5, 'Conectando ao servidor...');
+        setProgress(3, 'Acordando o servidor...');
         startElapsedTimer();
 
         const tipTimer = rotateTips();
 
-        try {
-            const res = await fetch(`${API}/generate`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt, duration, aspect_ratio: aspectRatio }),
-            });
+        // Tenta conectar com retry (Render free tier pode demorar ~30s para acordar)
+        let res, data;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                setProgress(3 + attempt * 2, attempt > 1
+                    ? `Reconectando... (tentativa ${attempt}/3)`
+                    : 'Conectando ao servidor...');
 
-            const data = await res.json();
+                res = await fetch(`${API}/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, duration, aspect_ratio: aspectRatio }),
+                });
 
-            if (!res.ok || data.error) {
-                clearInterval(tipTimer);
-                mostrarErro(data.error || 'Erro ao iniciar a geração.');
-                return;
+                data = await res.json();
+                break; // sucesso
+
+            } catch (e) {
+                console.warn(`[Tentativa ${attempt}/3] Erro de conexão:`, e);
+                if (attempt === 3) {
+                    clearInterval(tipTimer);
+                    mostrarErro('Não foi possível conectar ao servidor. O backend pode estar offline. Tente novamente em 30 segundos.');
+                    return;
+                }
+                // Aguarda antes de tentar novamente
+                await new Promise(r => setTimeout(r, 5000));
             }
-
-            // Começa polling
-            setProgress(10, 'Solicitação enviada! Aguardando IA...');
-            aguardarJob(data.job_id, tipTimer);
-
-        } catch (e) {
-            clearInterval(tipTimer);
-            mostrarErro('Não foi possível conectar ao servidor. Verifique se o backend está online.');
         }
+
+        if (!res.ok || data.error) {
+            clearInterval(tipTimer);
+            mostrarErro(data.error || 'Erro ao iniciar a geração.');
+            return;
+        }
+
+        // Começa polling
+        setProgress(10, 'Solicitação enviada! Aguardando IA...');
+        aguardarJob(data.job_id, tipTimer);
     }
 
     // ── Polling ───────────────────────────────────────────────────────────
+    let pollErrorCount = 0;
+    const MAX_POLL_ERRORS = 5;
+
     function aguardarJob(jobId, tipTimer) {
+        pollErrorCount = 0;
+
         pollingTimer = setInterval(async () => {
             try {
                 const res  = await fetch(`${API}/status/${jobId}`);
                 const data = await res.json();
+                pollErrorCount = 0; // reset on success
 
                 if (data.status === 'done') {
                     clearInterval(pollingTimer);
@@ -651,9 +672,17 @@
                 }
 
             } catch (e) {
-                clearInterval(pollingTimer);
-                clearInterval(tipTimer);
-                mostrarErro('Perda de conexão ao verificar o status do job.');
+                pollErrorCount++;
+                console.warn(`[Polling] Erro ${pollErrorCount}/${MAX_POLL_ERRORS}:`, e);
+
+                if (pollErrorCount >= MAX_POLL_ERRORS) {
+                    clearInterval(pollingTimer);
+                    clearInterval(tipTimer);
+                    mostrarErro('Perda de conexão ao verificar o status do job. Verifique sua internet e tente novamente.');
+                } else {
+                    // Mostra feedback visual mas continua tentando
+                    document.getElementById('status-msg').textContent = `Reconectando... (${pollErrorCount}/${MAX_POLL_ERRORS})`;
+                }
             }
         }, 3000); // verifica a cada 3 segundos
     }

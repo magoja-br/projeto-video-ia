@@ -21,8 +21,10 @@ PROJECT_ID = os.environ.get("PROJECT_ID", "gerador-de-imagens-ai")
 LOCATION   = os.environ.get("LOCATION", "us-central1")
 MODEL      = "veo-3.1-fast-generate-001"
 
+API_BASE = f"https://{LOCATION}-aiplatform.googleapis.com"
+
 PREDICT_URL = (
-    f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}"
+    f"{API_BASE}/v1/projects/{PROJECT_ID}"
     f"/locations/{LOCATION}/publishers/google/models/{MODEL}:predictLongRunning"
 )
 
@@ -101,7 +103,7 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
             return
 
         resp_data = resp.json()
-        print(f"[JOB {job_id}] Resposta completa: {str(resp_data)[:800]}")
+        print(f"[JOB {job_id}] Resposta completa: {json.dumps(resp_data, indent=2)[:800]}")
 
         operation_name = resp_data.get("name")
         if not operation_name:
@@ -114,37 +116,18 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
         jobs[job_id].update({"progress": 30, "message": "Gerando vídeo com IA..."})
 
         # ── 2. Polling da operação ────────────────────────────────────────
-        api_base = f"https://{LOCATION}-aiplatform.googleapis.com"
+        # A API retorna operation_name no formato completo:
+        #   projects/.../locations/.../publishers/google/models/.../operations/{id}
+        #
+        # O endpoint de polling usa o operation_name COMPLETO:
+        #   GET https://{LOCATION}-aiplatform.googleapis.com/v1/{operation_name}
+        #
+        # NÃO simplificar o path — usar exatamente como retornado pela API.
 
-        # A API retorna operation_name no formato:
-        # projects/.../locations/.../publishers/google/models/.../operations/{id}
-        # Mas o endpoint de polling (fetchOperation) precisa de:
-        # projects/.../locations/.../operations/{id}
+        poll_url = f"{API_BASE}/v1/{operation_name}"
+        print(f"[JOB {job_id}] Poll URL: {poll_url}")
 
-        # Extrai o operation_id do final do operation_name
-        op_id = operation_name.split("/operations/")[-1] if "/operations/" in operation_name else ""
-        simplified_name = f"projects/{PROJECT_ID}/locations/{LOCATION}/operations/{op_id}"
-
-        print(f"[JOB {job_id}] Operation ID: {op_id}")
-        print(f"[JOB {job_id}] Simplified name: {simplified_name}")
-
-        # Tenta múltiplos formatos de URL
-        poll_urls = [
-            f"{api_base}/v1/{simplified_name}",
-            f"{api_base}/v1beta1/{simplified_name}",
-            f"{api_base}/v1/{operation_name}",
-            f"{api_base}/v1beta1/{operation_name}",
-        ]
-
-        # Se operation_name já contiver a URL completa, usar diretamente
-        if operation_name.startswith("http"):
-            poll_urls = [operation_name]
-
-        # Detecta qual URL funciona na primeira tentativa
-        poll_url = None
         max_tentativas = 180  # ~15 minutos (180 × 5s)
-
-        print(f"[JOB {job_id}] URLs de polling para testar: {poll_urls}")
 
         for i in range(max_tentativas):
             time.sleep(5)
@@ -154,34 +137,47 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
                 token = get_token()
                 print(f"[JOB {job_id}] Token renovado (tentativa {i+1})")
 
-            # Tenta a URL de polling (ou descobre qual funciona)
-            poll_resp = None
-            urls_to_try = [poll_url] if poll_url else poll_urls
-
-            for url in urls_to_try:
-                try:
-                    resp_test = req.get(
-                        url,
-                        headers={"Authorization": f"Bearer {token}"},
-                        timeout=30,
-                    )
-                    if resp_test.status_code == 200:
-                        poll_resp = resp_test
-                        if poll_url != url:
-                            poll_url = url
-                            print(f"[JOB {job_id}] ✅ URL de polling encontrada: {url}")
-                        break
-                    else:
-                        if i == 0:
-                            print(f"[JOB {job_id}] URL {url} retornou HTTP {resp_test.status_code}")
-                except Exception as poll_err:
-                    if i == 0:
-                        print(f"[JOB {job_id}] URL {url} erro: {poll_err}")
-
-            if not poll_resp or poll_resp.status_code != 200:
+            try:
+                poll_resp = req.get(
+                    poll_url,
+                    headers={"Authorization": f"Bearer {token}"},
+                    timeout=30,
+                )
+            except Exception as poll_err:
+                print(f"[JOB {job_id}] Erro de conexão no polling (tentativa {i+1}): {poll_err}")
                 if i % 12 == 0:
-                    print(f"[JOB {job_id}] Polling sem resposta válida (tentativa {i+1})")
+                    jobs[job_id].update({"message": "Reconectando..."})
                 continue
+
+            if poll_resp.status_code != 200:
+                print(f"[JOB {job_id}] Polling HTTP {poll_resp.status_code} (tentativa {i+1}): {poll_resp.text[:200]}")
+                # Em caso de 404 persistente, tenta formato alternativo uma vez
+                if poll_resp.status_code == 404 and i == 0:
+                    # Tenta extrair operation_id e montar path simplificado
+                    if "/operations/" in operation_name:
+                        op_id = operation_name.split("/operations/")[-1]
+                        alt_url = f"{API_BASE}/v1/projects/{PROJECT_ID}/locations/{LOCATION}/operations/{op_id}"
+                        print(f"[JOB {job_id}] Tentando URL alternativa: {alt_url}")
+                        try:
+                            alt_resp = req.get(
+                                alt_url,
+                                headers={"Authorization": f"Bearer {token}"},
+                                timeout=30,
+                            )
+                            if alt_resp.status_code == 200:
+                                poll_url = alt_url
+                                print(f"[JOB {job_id}] ✅ URL alternativa funcionou!")
+                                poll_resp = alt_resp
+                            else:
+                                print(f"[JOB {job_id}] URL alternativa também falhou: HTTP {alt_resp.status_code}")
+                                continue
+                        except Exception as alt_err:
+                            print(f"[JOB {job_id}] Erro na URL alternativa: {alt_err}")
+                            continue
+                    else:
+                        continue
+                else:
+                    continue
 
             poll_data = poll_resp.json()
 
@@ -223,7 +219,7 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
             )
 
             if not predictions:
-                print(f"[JOB {job_id}] Sem predictions. Resposta: {str(poll_data)[:500]}")
+                print(f"[JOB {job_id}] Sem predictions. Resposta: {json.dumps(poll_data, indent=2)[:500]}")
                 jobs[job_id] = {"status": "error",
                                 "error": "API não retornou nenhum vídeo."}
                 return
@@ -251,8 +247,11 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
             gcs_uri = pred.get("gcsUri") or pred.get("videoUri")
             if gcs_uri:
                 print(f"[JOB {job_id}] Baixando do GCS: {gcs_uri}")
+                gcs_url = gcs_uri
+                if gcs_url.startswith("gs://"):
+                    gcs_url = gcs_url.replace("gs://", "https://storage.googleapis.com/", 1)
                 gcs_resp = req.get(
-                    gcs_uri.replace("gs://", "https://storage.googleapis.com/"),
+                    gcs_url,
                     headers={"Authorization": f"Bearer {token}"},
                     timeout=120,
                 )
@@ -271,8 +270,8 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
                 else:
                     print(f"[JOB {job_id}] Erro ao baixar GCS: HTTP {gcs_resp.status_code}")
 
-            print(f"[JOB {job_id}] Formato desconhecido: {str(pred)[:500]}")
-            jobs[job_id] = {                    
+            print(f"[JOB {job_id}] Formato desconhecido: {json.dumps(pred, indent=2)[:500]}")
+            jobs[job_id] = {
                 "status": "error",
                 "error": "Formato de resposta desconhecido. Dados: " + str(pred)[:300],
             }
@@ -287,6 +286,8 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
 
     except Exception as e:
         print(f"[JOB {job_id}] 💥 EXCEPTION: {e}")
+        import traceback
+        traceback.print_exc()
         jobs[job_id] = {"status": "error", "error": str(e)}
 
 
