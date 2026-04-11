@@ -201,14 +201,12 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
                 )
 
             if not predictions:
-                # Inclui estrutura da resposta no erro para diagnóstico
-                resp_keys = list(poll_data.keys())
                 resp_snippet = json.dumps(poll_data)[:800]
-                print(f"[JOB {job_id}] Sem predictions. Keys: {resp_keys}")
+                print(f"[JOB {job_id}] Sem predictions. Keys: {list(poll_data.keys())}")
                 print(f"[JOB {job_id}] Resposta: {resp_snippet}")
                 jobs[job_id] = {
                     "status": "error",
-                    "error": f"API não retornou nenhum vídeo. Resposta keys: {resp_keys}. Dados: {resp_snippet[:400]}",
+                    "error": "A IA não conseguiu gerar o vídeo. Tente com um prompt diferente (em inglês, mais detalhado).",
                 }
                 return
 
