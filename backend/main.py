@@ -114,9 +114,24 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
         jobs[job_id].update({"progress": 30, "message": "Gerando vídeo com IA..."})
 
         # ── 2. Polling da operação ────────────────────────────────────────
-        # Tenta múltiplas versões da API para polling
         api_base = f"https://{LOCATION}-aiplatform.googleapis.com"
+
+        # A API retorna operation_name no formato:
+        # projects/.../locations/.../publishers/google/models/.../operations/{id}
+        # Mas o endpoint de polling (fetchOperation) precisa de:
+        # projects/.../locations/.../operations/{id}
+
+        # Extrai o operation_id do final do operation_name
+        op_id = operation_name.split("/operations/")[-1] if "/operations/" in operation_name else ""
+        simplified_name = f"projects/{PROJECT_ID}/locations/{LOCATION}/operations/{op_id}"
+
+        print(f"[JOB {job_id}] Operation ID: {op_id}")
+        print(f"[JOB {job_id}] Simplified name: {simplified_name}")
+
+        # Tenta múltiplos formatos de URL
         poll_urls = [
+            f"{api_base}/v1/{simplified_name}",
+            f"{api_base}/v1beta1/{simplified_name}",
             f"{api_base}/v1/{operation_name}",
             f"{api_base}/v1beta1/{operation_name}",
         ]
