@@ -58,7 +58,7 @@ def get_token() -> str:
 
 
 # ── Tarefa de geração (thread separada) ───────────────────────────────────────
-def gerar_video(job_id: str, prompt: str, duration: int):
+def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
     try:
         jobs[job_id].update({"status": "processing", "progress": 10,
                              "message": "Autenticando..."})
@@ -71,7 +71,7 @@ def gerar_video(job_id: str, prompt: str, duration: int):
         payload = {
             "instances": [{"prompt": prompt}],
             "parameters": {
-                "aspectRatio": "16:9",
+                "aspectRatio": aspect_ratio,
                 "sampleCount": 1,
                 "durationSeconds": duration,
             },
@@ -225,9 +225,10 @@ def health():
 
 @app.route("/generate", methods=["POST"])
 def generate():
-    data     = request.json or {}
-    prompt   = data.get("prompt", "").strip()
-    duration = int(data.get("duration", 4))
+    data         = request.json or {}
+    prompt       = data.get("prompt", "").strip()
+    duration     = int(data.get("duration", 4))
+    aspect_ratio = data.get("aspect_ratio", "16:9")
 
     if not prompt:
         return jsonify({"error": "O campo 'prompt' é obrigatório."}), 400
@@ -235,11 +236,14 @@ def generate():
     if duration not in (4, 5, 6, 8, 10):
         duration = 4
 
+    if aspect_ratio not in ("16:9", "9:16"):
+        aspect_ratio = "16:9"
+
     job_id = str(uuid.uuid4())
     jobs[job_id] = {"status": "queued", "progress": 0, "message": "Na fila..."}
 
     thread = threading.Thread(
-        target=gerar_video, args=(job_id, prompt, duration), daemon=True
+        target=gerar_video, args=(job_id, prompt, duration, aspect_ratio), daemon=True
     )
     thread.start()
 

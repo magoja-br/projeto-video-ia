@@ -251,6 +251,14 @@
             </select>
         </div>
 
+        <div class="input-group">
+            <label for="aspect-ratio">Proporção da tela</label>
+            <select id="aspect-ratio">
+                <option value="16:9">🖥️ 16:9 — Paisagem (YouTube, TV)</option>
+                <option value="9:16">📱 9:16 — Retrato (Reels, TikTok, Shorts)</option>
+            </select>
+        </div>
+
         <button id="btn-gerar" onclick="iniciarGeracao()">✨ Gerar Clipe</button>
     </div>
 
@@ -303,8 +311,9 @@
 
     // ── Início ─────────────────────────────────────────────────────────────
     async function iniciarGeracao() {
-        const prompt   = document.getElementById('prompt').value.trim();
-        const duration = document.getElementById('duration').value;
+        const prompt      = document.getElementById('prompt').value.trim();
+        const duration    = document.getElementById('duration').value;
+        const aspectRatio = document.getElementById('aspect-ratio').value;
 
         if (!prompt) {
             alert('Por favor, descreva o clipe antes de gerar!');
@@ -322,7 +331,7 @@
             const res = await fetch(`${API}/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt, duration }),
+                body: JSON.stringify({ prompt, duration, aspect_ratio: aspectRatio }),
             });
 
             const data = await res.json();
