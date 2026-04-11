@@ -297,10 +297,56 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
 def health():
     return jsonify({
         "status": "online",
+        "version": "2.0.0",
         "project_id": PROJECT_ID,
         "location": LOCATION,
         "ia_model": MODEL,
     })
+
+
+@app.route("/test-auth", methods=["GET"])
+def test_auth():
+    """
+    Testa autenticação e conectividade com a API Vertex AI
+    SEM gerar vídeo (não consome créditos).
+    """
+    resultado = {"version": "2.0.0"}
+
+    # 1. Testar autenticação
+    try:
+        token = get_token()
+        resultado["auth"] = "ok"
+        resultado["token_preview"] = token[:20] + "..."
+    except Exception as e:
+        resultado["auth"] = "error"
+        resultado["auth_error"] = str(e)
+        return jsonify(resultado), 500
+
+    # 2. Testar acesso ao endpoint (OPTIONS/GET simples, não POST)
+    try:
+        test_url = (
+            f"{API_BASE}/v1/projects/{PROJECT_ID}"
+            f"/locations/{LOCATION}/publishers/google/models/{MODEL}"
+        )
+        resp = req.get(
+            test_url,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=15,
+        )
+        resultado["api_access"] = f"HTTP {resp.status_code}"
+        resultado["api_url_tested"] = test_url
+        if resp.status_code != 200:
+            resultado["api_response"] = resp.text[:300]
+    except Exception as e:
+        resultado["api_access"] = "error"
+        resultado["api_error"] = str(e)
+
+    # 3. Montar a URL de polling que seria usada (para debug)
+    fake_op = f"projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{MODEL}/operations/FAKE-ID"
+    resultado["poll_url_format"] = f"{API_BASE}/v1/{fake_op}"
+    resultado["predict_url"] = PREDICT_URL
+
+    return jsonify(resultado)
 
 
 @app.route("/generate", methods=["POST"])
