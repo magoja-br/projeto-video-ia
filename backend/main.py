@@ -19,7 +19,7 @@ CORS(app)
 # ── Configuração ──────────────────────────────────────────────────────────────
 PROJECT_ID = os.environ.get("PROJECT_ID", "gerador-de-imagens-ai")
 LOCATION   = os.environ.get("LOCATION", "us-central1")
-MODEL      = "veo-2.0-generate-001"
+MODEL      = "veo-3.1-fast-generate-001"
 
 PREDICT_URL = (
     f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}"
@@ -195,7 +195,7 @@ def gerar_video(job_id: str, prompt: str, duration: int):
                     }
                     return
 
-            jobs[job_id] = {
+            jobs[job_id] = {                    
                 "status": "error",
                 "error": "Formato de resposta desconhecido. Dados: " + str(pred)[:300],
             }
