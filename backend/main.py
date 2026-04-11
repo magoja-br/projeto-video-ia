@@ -25,7 +25,6 @@ PREDICT_URL = (
     f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}"
     f"/locations/{LOCATION}/publishers/google/models/{MODEL}:predictLongRunning"
 )
-POLL_BASE = f"https://{LOCATION}-aiplatform.googleapis.com/v1/"
 
 # Armazena jobs em memória
 jobs: dict = {}
@@ -101,21 +100,36 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
             }
             return
 
-        operation_name = resp.json().get("name")
+        resp_data = resp.json()
+        print(f"[JOB {job_id}] Resposta completa: {str(resp_data)[:800]}")
+
+        operation_name = resp_data.get("name")
         if not operation_name:
             print(f"[JOB {job_id}] Sem operation name. Resposta: {resp.text[:500]}")
             jobs[job_id] = {"status": "error",
                             "error": "API não retornou nome da operação."}
             return
 
-        print(f"[JOB {job_id}] Operation: {operation_name}")
+        print(f"[JOB {job_id}] Operation name: {operation_name}")
         jobs[job_id].update({"progress": 30, "message": "Gerando vídeo com IA..."})
 
         # ── 2. Polling da operação ────────────────────────────────────────
-        poll_url = POLL_BASE + operation_name
+        # Tenta múltiplas versões da API para polling
+        api_base = f"https://{LOCATION}-aiplatform.googleapis.com"
+        poll_urls = [
+            f"{api_base}/v1/{operation_name}",
+            f"{api_base}/v1beta1/{operation_name}",
+        ]
+
+        # Se operation_name já contiver a URL completa, usar diretamente
+        if operation_name.startswith("http"):
+            poll_urls = [operation_name]
+
+        # Detecta qual URL funciona na primeira tentativa
+        poll_url = None
         max_tentativas = 180  # ~15 minutos (180 × 5s)
 
-        print(f"[JOB {job_id}] Iniciando polling: {poll_url}")
+        print(f"[JOB {job_id}] URLs de polling para testar: {poll_urls}")
 
         for i in range(max_tentativas):
             time.sleep(5)
@@ -125,18 +139,33 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
                 token = get_token()
                 print(f"[JOB {job_id}] Token renovado (tentativa {i+1})")
 
-            try:
-                poll_resp = req.get(
-                    poll_url,
-                    headers={"Authorization": f"Bearer {token}"},
-                    timeout=30,
-                )
-            except Exception as poll_err:
-                print(f"[JOB {job_id}] Erro no poll (tentativa {i+1}): {poll_err}")
-                continue
+            # Tenta a URL de polling (ou descobre qual funciona)
+            poll_resp = None
+            urls_to_try = [poll_url] if poll_url else poll_urls
 
-            if poll_resp.status_code != 200:
-                print(f"[JOB {job_id}] Poll HTTP {poll_resp.status_code} (tentativa {i+1})")
+            for url in urls_to_try:
+                try:
+                    resp_test = req.get(
+                        url,
+                        headers={"Authorization": f"Bearer {token}"},
+                        timeout=30,
+                    )
+                    if resp_test.status_code == 200:
+                        poll_resp = resp_test
+                        if poll_url != url:
+                            poll_url = url
+                            print(f"[JOB {job_id}] ✅ URL de polling encontrada: {url}")
+                        break
+                    else:
+                        if i == 0:
+                            print(f"[JOB {job_id}] URL {url} retornou HTTP {resp_test.status_code}")
+                except Exception as poll_err:
+                    if i == 0:
+                        print(f"[JOB {job_id}] URL {url} erro: {poll_err}")
+
+            if not poll_resp or poll_resp.status_code != 200:
+                if i % 12 == 0:
+                    print(f"[JOB {job_id}] Polling sem resposta válida (tentativa {i+1})")
                 continue
 
             poll_data = poll_resp.json()
