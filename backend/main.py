@@ -197,6 +197,10 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
             # ── 3. Operação concluída ─────────────────────────────────────
             print(f"[JOB {job_id}] Operação concluída! (tentativa {i+1})")
 
+            # Salva resposta completa para debug
+            jobs[job_id]["debug_final_response"] = json.dumps(poll_data)[:2000]
+            jobs[job_id]["debug_final_keys"] = list(poll_data.keys())
+
             if poll_data.get("error"):
                 err = poll_data["error"]
                 err_msg = err.get("message", "Erro desconhecido da API.")
@@ -204,17 +208,33 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
                 jobs[job_id] = {
                     "status": "error",
                     "error": err_msg,
+                    "debug_final_response": json.dumps(poll_data)[:2000],
                 }
                 return
 
+            # Tenta extrair predictions de múltiplos formatos possíveis
             predictions = (
                 poll_data.get("response", {}).get("predictions", [])
+                or poll_data.get("predictions", [])
+                or poll_data.get("result", {}).get("predictions", [])
             )
 
+            # Se ainda não encontrou, procura videos
             if not predictions:
-                print(f"[JOB {job_id}] Sem predictions. Resposta: {json.dumps(poll_data, indent=2)[:500]}")
-                jobs[job_id] = {"status": "error",
-                                "error": "API não retornou nenhum vídeo."}
+                predictions = (
+                    poll_data.get("response", {}).get("videos", [])
+                    or poll_data.get("videos", [])
+                    or poll_data.get("result", {}).get("videos", [])
+                )
+
+            if not predictions:
+                print(f"[JOB {job_id}] Sem predictions. Resposta: {json.dumps(poll_data, indent=2)[:1000]}")
+                jobs[job_id] = {
+                    "status": "error",
+                    "error": "API não retornou nenhum vídeo.",
+                    "debug_final_response": json.dumps(poll_data)[:2000],
+                    "debug_final_keys": list(poll_data.keys()),
+                }
                 return
 
             pred = predictions[0]
@@ -290,7 +310,7 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
 def health():
     return jsonify({
         "status": "online",
-        "version": "3.0.0",
+        "version": "3.1.0",
         "project_id": PROJECT_ID,
         "location": LOCATION,
         "ia_model": MODEL,
