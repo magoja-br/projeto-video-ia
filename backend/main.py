@@ -77,6 +77,10 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
             },
         }
 
+        print(f"[JOB {job_id}] Prompt: {prompt[:100]}")
+        print(f"[JOB {job_id}] Params: duration={duration}, ratio={aspect_ratio}, model={MODEL}")
+        print(f"[JOB {job_id}] URL: {PREDICT_URL}")
+
         resp = req.post(
             PREDICT_URL,
             headers={
@@ -87,24 +91,31 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
             timeout=60,
         )
 
+        print(f"[JOB {job_id}] Resposta inicial: HTTP {resp.status_code}")
+
         if resp.status_code != 200:
+            print(f"[JOB {job_id}] ERRO: {resp.text[:500]}")
             jobs[job_id] = {
                 "status": "error",
-                "error": f"Erro ao iniciar geração (HTTP {resp.status_code}): {resp.text}",
+                "error": f"Erro ao iniciar geração (HTTP {resp.status_code}): {resp.text[:300]}",
             }
             return
 
         operation_name = resp.json().get("name")
         if not operation_name:
+            print(f"[JOB {job_id}] Sem operation name. Resposta: {resp.text[:500]}")
             jobs[job_id] = {"status": "error",
                             "error": "API não retornou nome da operação."}
             return
 
+        print(f"[JOB {job_id}] Operation: {operation_name}")
         jobs[job_id].update({"progress": 30, "message": "Gerando vídeo com IA..."})
 
         # ── 2. Polling da operação ────────────────────────────────────────
         poll_url = POLL_BASE + operation_name
-        max_tentativas = 72  # ~6 minutos (72 × 5s)
+        max_tentativas = 180  # ~15 minutos (180 × 5s)
+
+        print(f"[JOB {job_id}] Iniciando polling: {poll_url}")
 
         for i in range(max_tentativas):
             time.sleep(5)
@@ -112,14 +123,20 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
             # Renova token a cada ~10 tentativas (50s)
             if i % 10 == 9:
                 token = get_token()
+                print(f"[JOB {job_id}] Token renovado (tentativa {i+1})")
 
-            poll_resp = req.get(
-                poll_url,
-                headers={"Authorization": f"Bearer {token}"},
-                timeout=30,
-            )
+            try:
+                poll_resp = req.get(
+                    poll_url,
+                    headers={"Authorization": f"Bearer {token}"},
+                    timeout=30,
+                )
+            except Exception as poll_err:
+                print(f"[JOB {job_id}] Erro no poll (tentativa {i+1}): {poll_err}")
+                continue
 
             if poll_resp.status_code != 200:
+                print(f"[JOB {job_id}] Poll HTTP {poll_resp.status_code} (tentativa {i+1})")
                 continue
 
             poll_data = poll_resp.json()
@@ -130,21 +147,30 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
                 msg = "Preparando modelo..."
             elif pct < 70:
                 msg = "Gerando frames..."
-            elif pct < 88:
+            elif pct < 85:
                 msg = "Renderizando vídeo..."
-            else:
+            elif pct < 93:
                 msg = "Finalizando..."
+            else:
+                msg = "Quase pronto..."
             jobs[job_id].update({"progress": pct, "message": msg})
 
             if not poll_data.get("done"):
+                # Log a cada 12 tentativas (~1 min)
+                if i % 12 == 0:
+                    print(f"[JOB {job_id}] Ainda processando... (tentativa {i+1}, {pct}%)")
                 continue
 
             # ── 3. Operação concluída ─────────────────────────────────────
+            print(f"[JOB {job_id}] Operação concluída! (tentativa {i+1})")
+
             if poll_data.get("error"):
                 err = poll_data["error"]
+                err_msg = err.get("message", "Erro desconhecido da API.")
+                print(f"[JOB {job_id}] ERRO da API: {err_msg}")
                 jobs[job_id] = {
                     "status": "error",
-                    "error": err.get("message", "Erro desconhecido da API."),
+                    "error": err_msg,
                 }
                 return
 
@@ -153,11 +179,13 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
             )
 
             if not predictions:
+                print(f"[JOB {job_id}] Sem predictions. Resposta: {str(poll_data)[:500]}")
                 jobs[job_id] = {"status": "error",
                                 "error": "API não retornou nenhum vídeo."}
                 return
 
             pred = predictions[0]
+            print(f"[JOB {job_id}] Prediction keys: {list(pred.keys())}")
 
             # Caso A: vídeo em base64
             video_b64 = pred.get("bytesBase64Encoded")
@@ -166,6 +194,7 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
                 filepath = os.path.join(tempfile.gettempdir(), f"{job_id}.mp4")
                 with open(filepath, "wb") as f:
                     f.write(video_bytes)
+                print(f"[JOB {job_id}] ✅ Vídeo salvo (base64): {len(video_bytes)} bytes")
                 jobs[job_id] = {
                     "status": "done",
                     "progress": 100,
@@ -177,7 +206,7 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
             # Caso B: URI do GCS
             gcs_uri = pred.get("gcsUri") or pred.get("videoUri")
             if gcs_uri:
-                # Baixa o vídeo do GCS autenticado
+                print(f"[JOB {job_id}] Baixando do GCS: {gcs_uri}")
                 gcs_resp = req.get(
                     gcs_uri.replace("gs://", "https://storage.googleapis.com/"),
                     headers={"Authorization": f"Bearer {token}"},
@@ -187,6 +216,7 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
                     filepath = os.path.join(tempfile.gettempdir(), f"{job_id}.mp4")
                     with open(filepath, "wb") as f:
                         f.write(gcs_resp.content)
+                    print(f"[JOB {job_id}] ✅ Vídeo salvo (GCS): {len(gcs_resp.content)} bytes")
                     jobs[job_id] = {
                         "status": "done",
                         "progress": 100,
@@ -194,7 +224,10 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
                         "video_url": f"/video/{job_id}",
                     }
                     return
+                else:
+                    print(f"[JOB {job_id}] Erro ao baixar GCS: HTTP {gcs_resp.status_code}")
 
+            print(f"[JOB {job_id}] Formato desconhecido: {str(pred)[:500]}")
             jobs[job_id] = {                    
                 "status": "error",
                 "error": "Formato de resposta desconhecido. Dados: " + str(pred)[:300],
@@ -202,12 +235,14 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
             return
 
         # Timeout
+        print(f"[JOB {job_id}] ⏰ TIMEOUT após {max_tentativas * 5}s")
         jobs[job_id] = {
             "status": "error",
-            "error": "Tempo esgotado. A geração demorou mais de 6 minutos.",
+            "error": "Tempo esgotado. A geração demorou mais de 15 minutos. Tente novamente com um prompt mais simples.",
         }
 
     except Exception as e:
+        print(f"[JOB {job_id}] 💥 EXCEPTION: {e}")
         jobs[job_id] = {"status": "error", "error": str(e)}
 
 
