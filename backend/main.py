@@ -77,6 +77,67 @@ def get_token() -> str:
     return creds.token
 
 
+# ── Otimização de Prompt ──────────────────────────────────────────────────────
+def otimizar_prompt(original_prompt: str) -> str:
+    """
+    Usa o Gemini 1.5 Flash para traduzir e expandir o prompt para inglês,
+    tornando-o mais descritivo e cinematográfico.
+    """
+    try:
+        token = get_token()
+        # Usamos o Gemini 1.5 Flash para ser rápido e eficiente
+        url = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/gemini-1.5-flash-002:generateContent"
+        
+        system_instruction = (
+            "You are an expert prompt engineer for AI video generation (Google Veo). "
+            "Your task is to take a user prompt (likely in Portuguese) and: "
+            "1. Translate it to English if it's not already. "
+            "2. Expand it into a highly detailed, cinematic, and descriptive prompt. "
+            "3. Focus on lighting (e.g. dramatic, soft, golden hour), textures, camera movement (e.g. slow zoom, crane shot), and atmosphere. "
+            "4. Important: If the prompt is about religious figures like Jesus, ensure the depiction is artistic, respectful, and avoids violating safety policies. "
+            "5. Return ONLY the final English prompt text, no explanations."
+        )
+        
+        payload = {
+            "contents": [{
+                "role": "user",
+                "parts": [{"text": original_prompt}]
+            }],
+            "systemInstruction": {
+                "parts": [{"text": system_instruction}]
+            },
+            "generationConfig": {
+                "temperature": 0.5,
+                "maxOutputTokens": 400,
+            }
+        }
+        
+        resp = req.post(
+            url,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=30
+        )
+        
+        if resp.status_code == 200:
+            data = resp.json()
+            try:
+                optimized = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                if optimized:
+                    return optimized
+            except (KeyError, IndexError):
+                pass
+        
+        print(f"Aviso: Falha ao otimizar prompt (HTTP {resp.status_code}). Usando original.")
+    except Exception as e:
+        print(f"Erro na otimização de prompt: {e}")
+    
+    return original_prompt
+
+
 # ── Tarefa de geração (thread separada) ───────────────────────────────────────
 def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str, model_name: str):
     try:
@@ -90,16 +151,22 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str, mode
             f"/locations/{LOCATION}/publishers/google/models/{model_name}:fetchPredictOperation"
         )
 
-        jobs[job_id].update({"status": "processing", "progress": 10,
-                             "message": "Autenticando..."})
+        jobs[job_id].update({"status": "processing", "progress": 5,
+                             "message": "Otimizando prompt..."})
+
+        prompt_en = otimizar_prompt(prompt)
+        print(f"[JOB {job_id}] Original: {prompt}")
+        print(f"[JOB {job_id}] Otimizado: {prompt_en}")
+
+        jobs[job_id].update({"progress": 15, "message": "Autenticando..."})
 
         token = get_token()
 
-        jobs[job_id].update({"progress": 20, "message": "Enviando requisição ao VEO..."})
+        jobs[job_id].update({"progress": 25, "message": "Iniciando geração no VEO..."})
 
         # ── 1. Dispara a geração ──────────────────────────────────────────
         payload = {
-            "instances": [{"prompt": prompt}],
+            "instances": [{"prompt": prompt_en}],
             "parameters": {
                 "aspectRatio": aspect_ratio,
                 "sampleCount": 1,
@@ -235,7 +302,7 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str, mode
 
                 jobs[job_id] = {
                     "status": "error",
-                    "error": f"A IA não conseguiu gerar o vídeo{safety_reason}. Tente um prompt mais descritivo e em INGLÊS.",
+                    "error": f"A IA não conseguiu gerar o vídeo{safety_reason}. Ocorreu um bloqueio ou o prompt é muito complexo. Tente mudar os termos usados.",
                 }
                 return
 
