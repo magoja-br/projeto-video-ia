@@ -147,7 +147,6 @@ def otimizar_prompt(original_prompt: str) -> str:
     return original_prompt
 
 
-# ── Tarefa de geração (thread separada) ───────────────────────────────────────
 def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str, model_name: str):
     try:
         # Define os URLs dinamicamente baseado no modelo
@@ -171,11 +170,27 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str, mode
 
         token = get_token()
 
-        jobs[job_id].update({"progress": 25, "message": f"Enviando ao Veo... prompt: '{prompt_en[:80]}...'"})
+        # ── Preparação do Payload ──
+        instance = {"prompt": prompt_en}
+        
+        # Se houver imagem de referência (base64)
+        image_b64 = jobs[job_id].get("reference_image")
+        if image_b64:
+            # O Veo espera a imagem no campo 'image' dentro de 'instances'
+            # Pode ser uma URL do GCS ou bytes em base64 (dependendo da versão exata)
+            # Para o Veo 3.1, costuma ser via 'image' object
+            instance["image"] = {
+                "bytesBase64Encoded": image_b64
+            }
+            msg_envio = f"Enviando ao Veo (com imagem)... prompt: '{prompt_en[:40]}...'"
+        else:
+            msg_envio = f"Enviando ao Veo (apenas texto)... prompt: '{prompt_en[:40]}...'"
+
+        jobs[job_id].update({"progress": 25, "message": msg_envio})
 
         # ── 1. Dispara a geração ──────────────────────────────────────────
         payload = {
-            "instances": [{"prompt": prompt_en}],
+            "instances": [instance],
             "parameters": {
                 "aspectRatio": aspect_ratio,
                 "sampleCount": 1,
@@ -413,6 +428,7 @@ def generate():
     duration     = int(data.get("duration", 4))
     aspect_ratio = data.get("aspect_ratio", "16:9")
     model_name   = data.get("model", MODEL_FAST)
+    image_b64    = data.get("image") # Imagem em base64 (opcional)
 
     if model_name not in (MODEL_FAST, MODEL_BAL):
         model_name = MODEL_FAST
@@ -427,7 +443,12 @@ def generate():
         aspect_ratio = "16:9"
 
     job_id = str(uuid.uuid4())
-    jobs[job_id] = {"status": "queued", "progress": 0, "message": "Na fila..."}
+    jobs[job_id] = {
+        "status": "queued", 
+        "progress": 0, 
+        "message": "Na fila...",
+        "reference_image": image_b64 # Salva a imagem para o worker usar
+    }
 
     thread = threading.Thread(
         target=gerar_video, args=(job_id, prompt, duration, aspect_ratio, model_name), daemon=True

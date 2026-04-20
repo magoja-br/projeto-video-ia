@@ -435,6 +435,21 @@
             <div class="char-count"><span id="char-count">0</span>/2000</div>
         </div>
 
+        <div class="input-group">
+            <label for="ref-image">Imagem de Referência (Opcional)</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="file" id="ref-image" accept="image/*" style="display: none;" onchange="previewImage(this)">
+                <button type="button" class="btn-secondary" style="width: auto; padding: 8px 16px; margin: 0;" onclick="document.getElementById('ref-image').click()">
+                    📁 Escolher Imagem
+                </button>
+                <span id="file-name" style="font-size: 0.8rem; color: var(--muted);">Nenhuma imagem selecionada</span>
+            </div>
+            <div id="image-preview-container" class="hidden" style="margin-top: 12px; position: relative; width: fit-content;">
+                <img id="image-preview" src="" style="max-width: 100%; max-height: 120px; border-radius: 8px; border: 1px solid var(--border);">
+                <button type="button" style="position: absolute; top: -8px; right: -8px; background: var(--accent1); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;" onclick="removerImagem()">✕</button>
+            </div>
+        </div>
+
         <div class="input-row">
             <div class="input-group">
                 <label for="duration">Duração</label>
@@ -529,6 +544,31 @@
         document.getElementById('char-count').textContent = count;
     }
 
+    // ── Image handling ────────────────────────────────────────────────────
+    let currentImageBase64 = null;
+
+    function previewImage(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        document.getElementById('file-name').textContent = file.name;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            currentImageBase64 = e.target.result.split(',')[1]; // Apenas a parte base64
+            document.getElementById('image-preview').src = e.target.result;
+            document.getElementById('image-preview-container').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function removerImagem() {
+        currentImageBase64 = null;
+        document.getElementById('ref-image').value = '';
+        document.getElementById('file-name').textContent = 'Nenhuma imagem selecionada';
+        document.getElementById('image-preview-container').classList.add('hidden');
+    }
+
     // ── Elapsed time ──────────────────────────────────────────────────────
     function startElapsedTimer() {
         startTime = Date.now();
@@ -580,6 +620,7 @@
         document.getElementById('char-count').textContent = '0';
         document.getElementById('btn-gerar').disabled = false;
         currentVideoUrl = null;
+        removerImagem(); // Limpa a imagem de referência
     }
 
     // ── Download ──────────────────────────────────────────────────────────
@@ -640,7 +681,8 @@
                         prompt, 
                         duration, 
                         aspect_ratio: aspectRatio,
-                        model: model
+                        model: model,
+                        image: currentImageBase64 // Envia a imagem se existir
                     }),
                 });
 
