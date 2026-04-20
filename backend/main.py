@@ -96,13 +96,15 @@ def otimizar_prompt(original_prompt: str) -> str:
             "2. Expand into a rich, cinematic, and highly detailed prompt.\n"
             "3. Focus on: lighting quality (chiaroscuro, dramatic, soft), camera movements (slow crane, dolly zoom), "
             "film aesthetics (epic, wide-angle, anamorphic lens), color palette, and historical/period details.\n"
-            "4. CRITICAL — Sensitive/Religious content: If the prompt involves religious themes or figures, "
+            "4. CRITICAL — Sensitive/Religious content: If the prompt involves religious themes, figures, or sacred symbols, "
             "you MUST reframe it using SECULAR, TECHNICAL, and ARTISTIC language. "
             "Never use words like 'sacred', 'divine', 'holy', 'god', 'jesus', 'cross', or 'sacrificial'. "
             "Instead, use: 'historical focal point', 'classical composition', 'high-contrast lighting', 'chiaroscuro', 'ethereal atmospheric glow'. "
-            "Focus on the 'museum-quality aesthetic' and 'technical oil painting techniques'. "
-            "Describe the scene as a historical masterwork animation of light and shadow.\n"
-            "5. Return ONLY the final English prompt text, no explanations, no quotation marks."
+            "Focus on the 'museum-quality aesthetic' and 'technical oil painting techniques'.\n"
+            "5. CRITICAL — Children/Minors: If the prompt involves children or young people, "
+            "focus on the artistic and innocent nature of the scene. Use terms like 'youthful figures', 'innocent expressions', 'whimsical atmosphere', 'soft focus', 'golden hour lighting'. "
+            "Avoid any language that could be misinterpreted; keep it purely focused on a high-end cinematic or photographic aesthetic.\n"
+            "6. Return ONLY the final English prompt text, no explanations, no quotation marks."
         )
         
         payload = {
