@@ -19,7 +19,11 @@ CORS(app)
 # ── Configuração ──────────────────────────────────────────────────────────────
 PROJECT_ID = os.environ.get("PROJECT_ID", "gerador-de-imagens-ai")
 LOCATION   = os.environ.get("LOCATION", "us-central1")
-MODEL      = "veo-3.1-fast-generate-001"
+MODEL_FAST = "veo-3.1-fast-generate-001"
+MODEL_BAL  = "veo-3.1-generate-001"
+# O modelo padrão continua sendo o fast
+MODEL      = MODEL_FAST 
+APP_PASSWORD = os.environ.get("APP_PASSWORD", "mudar-senha-123") # Senha padrão se não definida
 
 API_BASE = f"https://{LOCATION}-aiplatform.googleapis.com"
 
@@ -35,6 +39,16 @@ FETCH_URL = (
 
 # Armazena jobs em memória
 jobs: dict = {}
+
+
+# ── Autenticação da App ───────────────────────────────────────────────────────
+def check_auth():
+    """Verifica se a senha enviada no header X-Password está correta."""
+    if not APP_PASSWORD:
+        return True # Sem senha configurada
+    
+    provided_password = request.headers.get("X-Password")
+    return provided_password == APP_PASSWORD
 
 
 # ── Autenticação ──────────────────────────────────────────────────────────────
@@ -64,8 +78,18 @@ def get_token() -> str:
 
 
 # ── Tarefa de geração (thread separada) ───────────────────────────────────────
-def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
+def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str, model_name: str):
     try:
+        # Define os URLs dinamicamente baseado no modelo
+        predict_url = (
+            f"{API_BASE}/v1/projects/{PROJECT_ID}"
+            f"/locations/{LOCATION}/publishers/google/models/{model_name}:predictLongRunning"
+        )
+        fetch_url = (
+            f"{API_BASE}/v1/projects/{PROJECT_ID}"
+            f"/locations/{LOCATION}/publishers/google/models/{model_name}:fetchPredictOperation"
+        )
+
         jobs[job_id].update({"status": "processing", "progress": 10,
                              "message": "Autenticando..."})
 
@@ -84,10 +108,10 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
         }
 
         print(f"[JOB {job_id}] Prompt: {prompt[:100]}")
-        print(f"[JOB {job_id}] Params: duration={duration}, ratio={aspect_ratio}, model={MODEL}")
+        print(f"[JOB {job_id}] Params: duration={duration}, ratio={aspect_ratio}, model={model_name}")
 
         resp = req.post(
-            PREDICT_URL,
+            predict_url,
             headers={
                 "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json",
@@ -138,7 +162,7 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
 
             try:
                 poll_resp = req.post(
-                    FETCH_URL,
+                    fetch_url,
                     headers={
                         "Authorization": f"Bearer {token}",
                         "Content-Type": "application/json",
@@ -281,21 +305,30 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str):
 
 @app.route("/", methods=["GET"])
 def health():
+    # Health check aberto para verificar se o serviço está vivo
     return jsonify({
         "status": "online",
-        "version": "3.2.0",
+        "version": "3.2.1",
         "project_id": PROJECT_ID,
         "location": LOCATION,
         "ia_model": MODEL,
+        "protected": bool(APP_PASSWORD)
     })
 
 
 @app.route("/generate", methods=["POST"])
 def generate():
+    if not check_auth():
+        return jsonify({"error": "Senha incorreta ou não fornecida."}), 401
+    
     data         = request.json or {}
     prompt       = data.get("prompt", "").strip()
     duration     = int(data.get("duration", 4))
     aspect_ratio = data.get("aspect_ratio", "16:9")
+    model_name   = data.get("model", MODEL_FAST)
+
+    if model_name not in (MODEL_FAST, MODEL_BAL):
+        model_name = MODEL_FAST
 
     if not prompt:
         return jsonify({"error": "O campo 'prompt' é obrigatório."}), 400
@@ -310,7 +343,7 @@ def generate():
     jobs[job_id] = {"status": "queued", "progress": 0, "message": "Na fila..."}
 
     thread = threading.Thread(
-        target=gerar_video, args=(job_id, prompt, duration, aspect_ratio), daemon=True
+        target=gerar_video, args=(job_id, prompt, duration, aspect_ratio, model_name), daemon=True
     )
     thread.start()
 
@@ -319,6 +352,9 @@ def generate():
 
 @app.route("/status/<job_id>", methods=["GET"])
 def status(job_id):
+    if not check_auth():
+        return jsonify({"error": "Senha incorreta."}), 401
+        
     job = jobs.get(job_id)
     if not job:
         return jsonify({"error": "Job não encontrado."}), 404
@@ -327,6 +363,15 @@ def status(job_id):
 
 @app.route("/video/<job_id>", methods=["GET"])
 def serve_video(job_id):
+    # Nota: Aqui a senha pode ser passada via query param (?password=...) 
+    # se o <video> tag não suportar custom headers facilmente.
+    # Mas para uso pessoal simples, vamos tentar via header ou query.
+    pass_header = request.headers.get("X-Password")
+    pass_query = request.args.get("password")
+    
+    if APP_PASSWORD and pass_header != APP_PASSWORD and pass_query != APP_PASSWORD:
+        return jsonify({"error": "Acesso negado."}), 401
+        
     filepath = os.path.join(tempfile.gettempdir(), f"{job_id}.mp4")
     if not os.path.exists(filepath):
         return jsonify({"error": "Vídeo não encontrado."}), 404

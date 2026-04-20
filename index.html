@@ -420,6 +420,11 @@
 
     <div class="card">
         <div class="input-group">
+            <label for="app-password">Senha de Segurança</label>
+            <input type="password" id="app-password" placeholder="Digite a senha..." value="" onchange="savePassword()">
+        </div>
+
+        <div class="input-group">
             <label for="prompt">Descreva o clipe</label>
             <textarea
                 id="prompt"
@@ -448,6 +453,14 @@
                     <option value="9:16">📱 9:16 Retrato</option>
                 </select>
             </div>
+        </div>
+
+        <div class="input-group">
+            <label for="model">Versão do Modelo (IA)</label>
+            <select id="model">
+                <option value="veo-3.1-fast-generate-001" selected>⚡ Veo 3.1 Fast (Mais Rápido)</option>
+                <option value="veo-3.1-generate-001">✨ Veo 3.1 High Quality (Melhor Qualidade)</option>
+            </select>
         </div>
 
         <button id="btn-gerar" onclick="iniciarGeracao()">✨ Gerar Clipe</button>
@@ -491,6 +504,14 @@
     let elapsedTimer = null;
     let startTime = null;
     let currentVideoUrl = null;
+
+    // Carrega senha salva
+    document.getElementById('app-password').value = localStorage.getItem('app_password') || '';
+
+    function savePassword() {
+        const pass = document.getElementById('app-password').value;
+        localStorage.setItem('app_password', pass);
+    }
 
     const tips = [
         '💡 <strong>Dica:</strong> A geração de vídeo com IA leva em média <strong>2 a 4 minutos</strong>. Fique tranquilo!',
@@ -578,6 +599,13 @@
         const prompt      = document.getElementById('prompt').value.trim();
         const duration    = document.getElementById('duration').value;
         const aspectRatio = document.getElementById('aspect-ratio').value;
+        const password    = document.getElementById('app-password').value;
+        const model       = document.getElementById('model').value;
+
+        if (!password) {
+            alert('Por favor, insira a senha de segurança!');
+            return;
+        }
 
         if (!prompt) {
             alert('Por favor, descreva o clipe antes de gerar!');
@@ -604,8 +632,16 @@
 
                 res = await fetch(`${API}/generate`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt, duration, aspect_ratio: aspectRatio }),
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Password': password
+                    },
+                    body: JSON.stringify({ 
+                        prompt, 
+                        duration, 
+                        aspect_ratio: aspectRatio,
+                        model: model
+                    }),
                 });
 
                 data = await res.json();
@@ -631,19 +667,21 @@
 
         // Começa polling
         setProgress(10, 'Solicitação enviada! Aguardando IA...');
-        aguardarJob(data.job_id, tipTimer);
+        aguardarJob(data.job_id, tipTimer, password);
     }
 
     // ── Polling ───────────────────────────────────────────────────────────
     let pollErrorCount = 0;
     const MAX_POLL_ERRORS = 5;
 
-    function aguardarJob(jobId, tipTimer) {
+    function aguardarJob(jobId, tipTimer, password) {
         pollErrorCount = 0;
 
         pollingTimer = setInterval(async () => {
             try {
-                const res  = await fetch(`${API}/status/${jobId}`);
+                const res  = await fetch(`${API}/status/${jobId}`, {
+                    headers: { 'X-Password': password }
+                });
                 const data = await res.json();
                 pollErrorCount = 0; // reset on success
 
@@ -656,7 +694,7 @@
                     setTimeout(() => {
                         document.getElementById('loading').classList.add('hidden');
                         const player = document.getElementById('video-player');
-                        currentVideoUrl = `${API}${data.video_url}`;
+                        currentVideoUrl = `${API}${data.video_url}?password=${encodeURIComponent(password)}`;
                         player.src = currentVideoUrl;
                         document.getElementById('result').classList.remove('hidden');
                     }, 600);
