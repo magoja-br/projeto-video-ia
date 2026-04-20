@@ -546,11 +546,13 @@
 
     // ── Image handling ────────────────────────────────────────────────────
     let currentImageBase64 = null;
+    let currentImageMime = null;
 
     function previewImage(input) {
         const file = input.files[0];
         if (!file) return;
 
+        currentImageMime = file.type; // Captura o tipo (ex: image/jpeg)
         document.getElementById('file-name').textContent = file.name;
 
         const reader = new FileReader();
@@ -564,6 +566,7 @@
 
     function removerImagem() {
         currentImageBase64 = null;
+        currentImageMime = null;
         document.getElementById('ref-image').value = '';
         document.getElementById('file-name').textContent = 'Nenhuma imagem selecionada';
         document.getElementById('image-preview-container').classList.add('hidden');
@@ -682,7 +685,8 @@
                         duration, 
                         aspect_ratio: aspectRatio,
                         model: model,
-                        image: currentImageBase64 // Envia a imagem se existir
+                        image: currentImageBase64,
+                        mimeType: currentImageMime // Enviando o tipo da imagem
                     }),
                 });
 
