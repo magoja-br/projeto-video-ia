@@ -225,12 +225,17 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str, mode
                 )
 
             if not predictions:
-                resp_snippet = json.dumps(poll_data)[:800]
-                print(f"[JOB {job_id}] Sem predictions. Keys: {list(poll_data.keys())}")
-                print(f"[JOB {job_id}] Resposta: {resp_snippet}")
+                print(f"[JOB {job_id}] ⚠️ Sem resultados. Dados completos: {json.dumps(poll_data)}")
+                
+                # Verifica se houve bloqueio por segurança
+                safety_reason = ""
+                # O formato pode variar, tentamos encontrar atributos de segurança
+                if "safetyAttributes" in str(poll_data):
+                    safety_reason = " (Bloqueado por filtros de segurança/política do Google)"
+
                 jobs[job_id] = {
                     "status": "error",
-                    "error": "A IA não conseguiu gerar o vídeo. Tente com um prompt diferente (em inglês, mais detalhado).",
+                    "error": f"A IA não conseguiu gerar o vídeo{safety_reason}. Tente um prompt mais descritivo e em INGLÊS.",
                 }
                 return
 
