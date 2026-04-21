@@ -408,12 +408,146 @@
 
             .subtitle { font-size: 0.85rem; margin-bottom: 24px; }
         }
+
+        /* ── Modal de Custos ── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: modalSlide 0.3s ease-out;
+        }
+
+        @keyframes modalSlide {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .modal-footer {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            text-align: right;
+        }
+
+        .cost-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .cost-card {
+            background: var(--surface2);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .cost-card .label {
+            font-size: 0.7rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .cost-card .value {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--accent3);
+        }
+
+        .history-list {
+            list-style: none;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.85rem;
+        }
+
+        .history-item:last-child { border-bottom: none; }
+
+        .history-info { display: flex; flex-direction: column; }
+        .history-date { font-size: 0.7rem; color: var(--muted); }
+        .history-model { font-weight: 600; color: var(--text); }
+        .history-price { font-weight: 700; color: var(--accent1); }
+        
+        .btn-costs-trigger {
+            position: absolute;
+            top: 10px;
+            right: 0px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-costs-trigger:hover {
+            color: var(--text);
+            border-color: var(--accent1);
+            background: rgba(255,75,43,0.1);
+        }
     </style>
 </head>
 
 <body>
 <div class="container">
-    <div class="header-icon">🎬</div>
+    <div class="header-icon" style="position: relative;">
+        🎬
+        <button class="btn-costs-trigger" onclick="abrirCustos()">📊 Custos</button>
+    </div>
     <h1>Clip Generator</h1>
     <p class="subtitle">Crie clipes com a IA de vídeo do Google</p>
     <div class="badge">⚡ Powered by Veo 3.1</div>
@@ -507,6 +641,38 @@
         </div>
     </div>
 
+    <!-- Modal de Custos -->
+    <div id="modal-costs" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="font-weight: 700;">Gestão de Custos</h3>
+                <button onclick="fecharCustos()" style="background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.5rem;">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="cost-summary">
+                    <div class="cost-card">
+                        <div class="label">Total Estimado</div>
+                        <div class="value" id="total-brl">R$ 0,00</div>
+                    </div>
+                    <div class="cost-card">
+                        <div class="label">Em Dólar</div>
+                        <div class="value" id="total-usd">$0.00</div>
+                    </div>
+                </div>
+                
+                <h4 style="font-size: 0.8rem; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.05em;">Histórico Recente (Últimos 50)</h4>
+                <div id="costs-history" class="history-list">
+                    <!-- Gerado via JS -->
+                    <p style="text-align: center; color: var(--muted); font-size: 0.8rem; padding: 20px;">Carregando histórico...</p>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                <button class="btn-secondary" onclick="zerarHistorico()" style="color: #ff8070; border-color: rgba(255,75,43,0.2); padding: 8px 15px; font-size: 0.75rem;">🗑 Zerar Histórico</button>
+                <button class="btn-secondary" onclick="fecharCustos()" style="padding: 8px 20px;">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <div class="footer">
         Feito com ❤️ usando <a href="https://deepmind.google/technologies/veo/" target="_blank">Google Veo 3.1</a>
     </div>
@@ -519,6 +685,14 @@
     let elapsedTimer = null;
     let startTime = null;
     let currentVideoUrl = null;
+    let currentJobParams = null; // Para guardar model/duration para o log
+
+    // Constantes de Preço (Sincronizadas com o Backend)
+    const PRICING = {
+        'veo-3.1-fast-generate-001': 0.15,
+        'veo-3.1-generate-001': 0.50
+    };
+    const EXCHANGE_RATE = 5.50;
 
     // Carrega senha salva
     document.getElementById('app-password').value = localStorage.getItem('app_password') || '';
@@ -686,11 +860,20 @@
                         aspect_ratio: aspectRatio,
                         model: model,
                         image: currentImageBase64,
-                        mimeType: currentImageMime // Enviando o tipo da imagem
+                        mimeType: currentImageMime
                     }),
                 });
 
                 data = await res.json();
+                
+                // Salva parâmetros para logar no sucesso
+                currentJobParams = { 
+                    prompt, 
+                    duration, 
+                    model, 
+                    job_id: data.job_id 
+                };
+
                 break; // sucesso
 
             } catch (e) {
@@ -737,6 +920,9 @@
                     stopElapsedTimer();
                     setProgress(100, '🎉 Concluído!');
 
+                    // Registrar no LocalStorage
+                    salvarCustoLocal(currentJobParams);
+
                     setTimeout(() => {
                         document.getElementById('loading').classList.add('hidden');
                         const player = document.getElementById('video-player');
@@ -769,6 +955,86 @@
                 }
             }
         }, 3000); // verifica a cada 3 segundos
+    }
+
+    // ── Custos (Persistência Local) ───────────────────────────────────────
+    
+    function salvarCustoLocal(params) {
+        if (!params) return;
+        
+        const pricePerSec = PRICING[params.model] || 0.15;
+        const costUsd = pricePerSec * params.duration;
+        const costBrl = costUsd * EXCHANGE_RATE;
+        
+        const entry = {
+            timestamp: new Date().toISOString(),
+            job_id: params.job_id,
+            prompt: params.prompt,
+            model: params.model,
+            duration: params.duration,
+            cost_usd: costUsd,
+            cost_brl: costBrl
+        };
+        
+        let history = JSON.parse(localStorage.getItem('usage_history') || '[]');
+        history.push(entry);
+        localStorage.setItem('usage_history', JSON.stringify(history));
+        console.log("Custo salvo localmente:", entry);
+    }
+
+    function abrirCustos() {
+        document.getElementById('modal-costs').classList.add('active');
+        atualizarTelaCustos();
+    }
+
+    function atualizarTelaCustos() {
+        const history = JSON.parse(localStorage.getItem('usage_history') || '[]');
+        
+        const totalBrl = history.reduce((sum, item) => sum + (item.cost_brl || 0), 0);
+        const totalUsd = history.reduce((sum, item) => sum + (item.cost_usd || 0), 0);
+
+        document.getElementById('total-brl').textContent = `R$ ${totalBrl.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        document.getElementById('total-usd').textContent = `$${totalUsd.toFixed(2)}`;
+
+        const historyEl = document.getElementById('costs-history');
+        if (history.length === 0) {
+            historyEl.innerHTML = `<p style="text-align: center; color: var(--muted); font-size: 0.8rem; padding: 20px;">Nenhum registro encontrado no seu navegador.</p>`;
+            return;
+        }
+
+        historyEl.innerHTML = [...history].reverse().slice(0, 50).map(item => {
+            const date = new Date(item.timestamp).toLocaleString('pt-BR', {
+                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+            });
+            const isFast = item.model.includes('fast');
+            const promptClipping = item.prompt || 'Sem descrição';
+            
+            return `
+                <div class="history-item" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 0;">
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                        <div class="history-info">
+                            <span class="history-model">${isFast ? '⚡ Fast' : '✨ Quality'} (${item.duration}s)</span>
+                            <span class="history-date">${date}</span>
+                        </div>
+                        <span class="history-price">R$ ${item.cost_brl.toFixed(2)}</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--muted); font-style: italic; background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px; width: 100%; margin-top: 4px;">
+                        "${promptClipping}"
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function zerarHistorico() {
+        if (confirm('Deseja realmente apagar todo o histórico de custos salvo neste navegador? Esta ação não pode ser desfeita.')) {
+            localStorage.removeItem('usage_history');
+            atualizarTelaCustos();
+        }
+    }
+
+    function fecharCustos() {
+        document.getElementById('modal-costs').classList.remove('active');
     }
 </script>
 </body>

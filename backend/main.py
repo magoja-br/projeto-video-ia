@@ -5,6 +5,7 @@ import base64
 import threading
 import tempfile
 import json
+import datetime
 
 import requests as req
 from flask import Flask, request, jsonify, send_file
@@ -40,6 +41,43 @@ FETCH_URL = (
 # Armazena jobs em memória
 jobs: dict = {}
 
+# Preços estimados (USD por segundo)
+PRICING = {
+    MODEL_FAST: 0.15,
+    MODEL_BAL: 0.50
+}
+EXCHANGE_RATE = 5.50  # Taxa de conversão USD -> BRL aproximada
+
+COST_LOG_FILE = "usage_log.json"
+
+def log_usage(model, duration, prompt="", job_id="", status="success"):
+    """Registra o uso e calcula o custo estimado com detalhes do vídeo."""
+    cost_usd = PRICING.get(model, 0.15) * duration
+    cost_brl = cost_usd * EXCHANGE_RATE
+    
+    entry = {
+        "timestamp": datetime.datetime.now().isoformat(),
+        "job_id": job_id,
+        "prompt": prompt[:100] + ("..." if len(prompt) > 100 else ""), # Trunca para não pesar o log
+        "model": model,
+        "duration": duration,
+        "status": status,
+        "cost_usd": round(cost_usd, 4),
+        "cost_brl": round(cost_brl, 2)
+    }
+    
+    try:
+        data = []
+        if os.path.exists(COST_LOG_FILE):
+            with open(COST_LOG_FILE, "r") as f:
+                data = json.load(f)
+        
+        data.append(entry)
+        
+        with open(COST_LOG_FILE, "w") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        print(f"Erro ao salvar log de custo: {e}")
 
 # ── Autenticação da App ───────────────────────────────────────────────────────
 def check_auth():
@@ -347,6 +385,10 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str, mode
                 with open(filepath, "wb") as f:
                     f.write(video_bytes)
                 print(f"[JOB {job_id}] ✅ Vídeo salvo (base64): {len(video_bytes)} bytes")
+                
+                # Registrar custo detalhado
+                log_usage(model_name, duration, prompt=prompt, job_id=job_id)
+
                 jobs[job_id] = {
                     "status": "done",
                     "progress": 100,
@@ -372,6 +414,10 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str, mode
                     with open(filepath, "wb") as f:
                         f.write(gcs_resp.content)
                     print(f"[JOB {job_id}] ✅ Vídeo salvo (GCS): {len(gcs_resp.content)} bytes")
+                    
+                    # Registrar custo detalhado
+                    log_usage(model_name, duration, prompt=prompt, job_id=job_id)
+                    
                     jobs[job_id] = {
                         "status": "done",
                         "progress": 100,
@@ -486,6 +532,32 @@ def serve_video(job_id):
     if not os.path.exists(filepath):
         return jsonify({"error": "Vídeo não encontrado."}), 404
     return send_file(filepath, mimetype="video/mp4")
+
+
+@app.route("/costs", methods=["GET"])
+def get_costs():
+    if not check_auth():
+        return jsonify({"error": "Senha incorreta."}), 401
+        
+    if not os.path.exists(COST_LOG_FILE):
+        return jsonify({"total_brl": 0, "history": []})
+        
+    try:
+        with open(COST_LOG_FILE, "r") as f:
+            history = json.load(f)
+        
+        total_brl = sum(item.get("cost_brl", 0) for item in history)
+        total_usd = sum(item.get("cost_usd", 0) for item in history)
+        
+        return jsonify({
+            "total_brl": round(total_brl, 2),
+            "total_usd": round(total_usd, 2),
+            "exchange_rate": EXCHANGE_RATE,
+            "count": len(history),
+            "history": history[-50:] # Retorna os últimos 50
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
