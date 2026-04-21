@@ -22,8 +22,7 @@ PROJECT_ID = os.environ.get("PROJECT_ID", "gerador-de-imagens-ai")
 LOCATION   = os.environ.get("LOCATION", "us-central1")
 MODEL_FAST  = "veo-3.1-fast-generate-001"
 MODEL_BAL   = "veo-3.1-generate-001"
-MODEL_LIGHT = "veo-3.1-light-generate-001"
-MODEL_IMAGEN= "image-to-video" # Ou imagegeneration@006 dependendo da região
+MODEL_VEO2  = "veo-2.0-generate-001"
 # O modelo padrão continua sendo o fast
 MODEL      = MODEL_FAST 
 APP_PASSWORD = os.environ.get("APP_PASSWORD", "mudar-senha-123") # Senha padrão se não definida
@@ -47,8 +46,7 @@ jobs: dict = {}
 PRICING = {
     MODEL_FAST: 0.15,
     MODEL_BAL: 0.50,
-    MODEL_LIGHT: 0.08,
-    MODEL_IMAGEN: 0.05
+    MODEL_VEO2: 0.10
 }
 EXCHANGE_RATE = 5.50  # Taxa de conversão USD -> BRL aproximada
 
@@ -481,7 +479,7 @@ def generate():
     image_b64    = data.get("image")
     image_mime   = data.get("mimeType")
 
-    if model_name not in (MODEL_FAST, MODEL_BAL, MODEL_LIGHT, MODEL_IMAGEN):
+    if model_name not in (MODEL_FAST, MODEL_BAL, MODEL_VEO2):
         model_name = MODEL_FAST
 
     if not prompt:

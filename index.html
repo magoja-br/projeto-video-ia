@@ -607,10 +607,9 @@
         <div class="input-group">
             <label for="model">Versão do Modelo (IA)</label>
             <select id="model">
-                <option value="veo-3.1-fast-generate-001" selected>⚡ Veo 3.1 Fast (Equilibrado)</option>
-                <option value="veo-3.1-generate-001">✨ Veo 3.1 High Quality (Premium)</option>
-                <option value="veo-3.1-light-generate-001">🍃 Veo 3.1 Light (Econômico)</option>
-                <option value="image-to-video">📉 Imagen 2 Video (Mais Baratos - Máx 4s)</option>
+                <option value="veo-3.1-fast-generate-001" selected>⚡ Veo 3.1 Fast (Equilibrado - R$ 0,83/seg)</option>
+                <option value="veo-3.1-generate-001">✨ Veo 3.1 Standard (Alta Qualidade - R$ 2,75/seg)</option>
+                <option value="veo-2.0-generate-001">📉 Veo 2.0 (Econômico - R$ 0,55/seg)</option>
             </select>
         </div>
 
@@ -693,8 +692,7 @@
     const PRICING = {
         'veo-3.1-fast-generate-001': 0.15,
         'veo-3.1-generate-001': 0.50,
-        'veo-3.1-light-generate-001': 0.08,
-        'image-to-video': 0.05
+        'veo-2.0-generate-001': 0.10
     };
     const EXCHANGE_RATE = 5.50;
 
