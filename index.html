@@ -1008,14 +1008,20 @@
             const date = new Date(item.timestamp).toLocaleString('pt-BR', {
                 day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
             });
-            const isFast = item.model.includes('fast');
+            
+            // Lógica melhorada para os nomes
+            let modelLabel = '🤖 IA';
+            if (item.model.includes('fast')) modelLabel = '⚡ Fast';
+            else if (item.model.includes('veo-2.0')) modelLabel = '📉 Veo 2.0';
+            else if (item.model === 'veo-3.1-generate-001') modelLabel = '✨ Standard';
+
             const promptClipping = item.prompt || 'Sem descrição';
             
             return `
                 <div class="history-item" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 0;">
                     <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
                         <div class="history-info">
-                            <span class="history-model">${isFast ? '⚡ Fast' : '✨ Quality'} (${item.duration}s)</span>
+                            <span class="history-model">${modelLabel} (${item.duration}s)</span>
                             <span class="history-date">${date}</span>
                         </div>
                         <span class="history-price">R$ ${item.cost_brl.toFixed(2)}</span>
