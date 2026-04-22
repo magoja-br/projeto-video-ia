@@ -48,9 +48,12 @@ PRICING = {
     MODEL_BAL: 0.50,
     MODEL_VEO2: 0.10
 }
-EXCHANGE_RATE = 5.50  # Taxa de conversão USD -> BRL aproximada
-
+EXCHANGE_RATE = 6.25  # Taxa de 5.87 + IOF e impostos locais (aprox. 6.25)
+    
 COST_LOG_FILE = "usage_log.json"
+
+# Cache simples para evitar gerações duplicadas em retentativas rápidas
+active_prompts = {}
 
 def log_usage(model, duration, prompt="", job_id="", status="success"):
     """Registra o uso e calcula o custo estimado com detalhes do vídeo."""
@@ -60,7 +63,7 @@ def log_usage(model, duration, prompt="", job_id="", status="success"):
     entry = {
         "timestamp": datetime.datetime.now().isoformat(),
         "job_id": job_id,
-        "prompt": prompt[:100] + ("..." if len(prompt) > 100 else ""), # Trunca para não pesar o log
+        "prompt": prompt[:100] + ("..." if len(prompt) > 100 else ""), 
         "model": model,
         "duration": duration,
         "status": status,
@@ -259,6 +262,8 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str, mode
                 "status": "error",
                 "error": f"Erro ao iniciar geração (HTTP {resp.status_code}): {resp.text[:300]}",
             }
+            # Log de erro para rastreio de custo (se houver cobrança)
+            log_usage(model_name, duration, prompt=prompt, job_id=job_id, status=f"error_{resp.status_code}")
             return
 
         resp_data = resp.json()
@@ -374,6 +379,8 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str, mode
                         f"Tente descrever a cena de forma diferente."
                     ),
                 }
+                # Log de erro/bloqueio para rastreio de custo
+                log_usage(model_name, duration, prompt=prompt, job_id=job_id, status="safety_blocked")
                 return
 
             pred = predictions[0]
@@ -479,11 +486,22 @@ def generate():
     image_b64    = data.get("image")
     image_mime   = data.get("mimeType")
 
-    if model_name not in (MODEL_FAST, MODEL_BAL, MODEL_VEO2):
-        model_name = MODEL_FAST
-
     if not prompt:
         return jsonify({"error": "O campo 'prompt' é obrigatório."}), 400
+
+    # Deduplicação: Gera uma chave baseada nos parâmetros
+    # Se um pedido idêntico foi feito nos últimos 60 segundos, retorna o mesmo job_id
+    prompt_key = f"{prompt}_{duration}_{aspect_ratio}_{model_name}"
+    now = time.time()
+    
+    if prompt_key in active_prompts:
+        old_job_id, timestamp = active_prompts[prompt_key]
+        if now - timestamp < 60: # 1 minuto de proteção
+            print(f"[DEDUPLICACAO] Retornando job_id existente: {old_job_id}")
+            return jsonify({"job_id": old_job_id})
+
+    if model_name not in (MODEL_FAST, MODEL_BAL, MODEL_VEO2):
+        model_name = MODEL_FAST
 
     if duration not in (4, 5, 6, 8, 10):
         duration = 4
@@ -492,6 +510,8 @@ def generate():
         aspect_ratio = "16:9"
 
     job_id = str(uuid.uuid4())
+    active_prompts[prompt_key] = (job_id, now) # Salva no cache
+
     jobs[job_id] = {
         "status": "queued", 
         "progress": 0, 

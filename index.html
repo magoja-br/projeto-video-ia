@@ -1,29 +1,38 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Clip Generator – Crie vídeos com IA</title>
-    <meta name="description" content="Gere clipes de vídeo incríveis com Inteligência Artificial do Google usando apenas uma descrição de texto.">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+    <meta name="description"
+        content="Gere clipes de vídeo incríveis com Inteligência Artificial do Google usando apenas uma descrição de texto.">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         :root {
-            --bg:        #0a0a10;
-            --surface:   #12121c;
-            --surface2:  #1a1a28;
-            --border:    #2a2a3a;
-            --accent1:   #ff4b2b;
-            --accent2:   #ff416c;
-            --accent3:   #ff9a6c;
-            --text:      #e8e8f0;
-            --muted:     #6b6b80;
-            --radius:    14px;
-            --glow:      rgba(255,75,43,.15);
+            --bg: #0a0a10;
+            --surface: #12121c;
+            --surface2: #1a1a28;
+            --border: #2a2a3a;
+            --accent1: #ff4b2b;
+            --accent2: #ff416c;
+            --accent3: #ff9a6c;
+            --text: #e8e8f0;
+            --muted: #6b6b80;
+            --radius: 14px;
+            --glow: rgba(255, 75, 43, .15);
         }
 
         body {
@@ -44,17 +53,22 @@
             position: fixed;
             inset: 0;
             background:
-                radial-gradient(ellipse 60% 40% at 20% 10%, rgba(255,75,43,.10) 0%, transparent 60%),
-                radial-gradient(ellipse 50% 35% at 80% 90%, rgba(255,65,108,.08) 0%, transparent 60%),
-                radial-gradient(circle at 50% 50%, rgba(255,154,108,.04) 0%, transparent 50%);
+                radial-gradient(ellipse 60% 40% at 20% 10%, rgba(255, 75, 43, .10) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 35% at 80% 90%, rgba(255, 65, 108, .08) 0%, transparent 60%),
+                radial-gradient(circle at 50% 50%, rgba(255, 154, 108, .04) 0%, transparent 50%);
             pointer-events: none;
             z-index: 0;
             animation: bgPulse 8s ease-in-out infinite alternate;
         }
 
         @keyframes bgPulse {
-            0% { opacity: .7; }
-            100% { opacity: 1; }
+            0% {
+                opacity: .7;
+            }
+
+            100% {
+                opacity: 1;
+            }
         }
 
         .container {
@@ -74,8 +88,15 @@
         }
 
         @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-6px);
+            }
         }
 
         h1 {
@@ -97,8 +118,8 @@
 
         .badge {
             display: inline-block;
-            background: linear-gradient(135deg, rgba(255,75,43,.15), rgba(255,65,108,.15));
-            border: 1px solid rgba(255,75,43,.2);
+            background: linear-gradient(135deg, rgba(255, 75, 43, .15), rgba(255, 65, 108, .15));
+            border: 1px solid rgba(255, 75, 43, .2);
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.72rem;
@@ -115,17 +136,20 @@
             border: 1px solid var(--border);
             border-radius: 20px;
             padding: 32px;
-            box-shadow: 0 24px 60px rgba(0,0,0,.6);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, .6);
             backdrop-filter: blur(10px);
             transition: box-shadow .3s;
         }
 
         .card:hover {
-            box-shadow: 0 24px 80px rgba(0,0,0,.7), 0 0 40px var(--glow);
+            box-shadow: 0 24px 80px rgba(0, 0, 0, .7), 0 0 40px var(--glow);
         }
 
         /* ── Inputs ── */
-        .input-group { text-align: left; margin-bottom: 20px; }
+        .input-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
 
         label {
             display: block;
@@ -137,7 +161,9 @@
             margin-bottom: 8px;
         }
 
-        input[type="text"], select, textarea {
+        input[type="text"],
+        select,
+        textarea {
             width: 100%;
             padding: 13px 16px;
             border-radius: var(--radius);
@@ -157,13 +183,17 @@
             line-height: 1.5;
         }
 
-        input[type="text"]:focus, select:focus, textarea:focus {
+        input[type="text"]:focus,
+        select:focus,
+        textarea:focus {
             border-color: var(--accent1);
-            box-shadow: 0 0 0 3px rgba(255,75,43,.12);
+            box-shadow: 0 0 0 3px rgba(255, 75, 43, .12);
             transform: translateY(-1px);
         }
 
-        select option { background: #13131a; }
+        select option {
+            background: #13131a;
+        }
 
         .input-row {
             display: grid;
@@ -191,7 +221,7 @@
             font-size: 1.05rem;
             cursor: pointer;
             transition: transform .2s, filter .2s, box-shadow .2s;
-            box-shadow: 0 8px 24px rgba(255,65,108,.3);
+            box-shadow: 0 8px 24px rgba(255, 65, 108, .3);
             position: relative;
             overflow: hidden;
         }
@@ -200,7 +230,7 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .15), transparent);
             transform: translateX(-100%);
             transition: transform .6s;
         }
@@ -212,14 +242,18 @@
         #btn-gerar:hover:not(:disabled) {
             transform: translateY(-2px);
             filter: brightness(1.12);
-            box-shadow: 0 12px 36px rgba(255,65,108,.45);
+            box-shadow: 0 12px 36px rgba(255, 65, 108, .45);
         }
 
         #btn-gerar:active:not(:disabled) {
             transform: translateY(0);
         }
 
-        #btn-gerar:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+        #btn-gerar:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+            transform: none;
+        }
 
         /* ── Loading ── */
         #loading {
@@ -228,14 +262,26 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
-        .spinner-wrap { display: flex; justify-content: center; margin-bottom: 16px; }
+        .spinner-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
 
         .spinner {
-            width: 48px; height: 48px;
+            width: 48px;
+            height: 48px;
             border: 3px solid var(--border);
             border-top-color: var(--accent1);
             border-right-color: var(--accent2);
@@ -243,7 +289,11 @@
             animation: spin .8s linear infinite;
         }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
 
         #status-msg {
             font-size: 0.92rem;
@@ -259,7 +309,8 @@
         }
 
         .progress-bar {
-            width: 100%; height: 8px;
+            width: 100%;
+            height: 8px;
             background: var(--border);
             border-radius: 99px;
             overflow: hidden;
@@ -277,9 +328,17 @@
         }
 
         @keyframes shimmer {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
         }
 
         #progress-pct {
@@ -315,7 +374,7 @@
             width: 100%;
             border-radius: var(--radius);
             border: 2px solid var(--accent1);
-            box-shadow: 0 0 40px rgba(255,75,43,.2), 0 20px 60px rgba(0,0,0,.5);
+            box-shadow: 0 0 40px rgba(255, 75, 43, .2), 0 20px 60px rgba(0, 0, 0, .5);
         }
 
         .result-actions {
@@ -345,20 +404,20 @@
         }
 
         .btn-download {
-            background: linear-gradient(135deg, rgba(255,75,43,.1), rgba(255,65,108,.1));
-            border-color: rgba(255,75,43,.3);
+            background: linear-gradient(135deg, rgba(255, 75, 43, .1), rgba(255, 65, 108, .1));
+            border-color: rgba(255, 75, 43, .3);
             color: var(--accent3);
         }
 
         .btn-download:hover {
-            background: linear-gradient(135deg, rgba(255,75,43,.2), rgba(255,65,108,.2));
+            background: linear-gradient(135deg, rgba(255, 75, 43, .2), rgba(255, 65, 108, .2));
         }
 
         /* ── Erro ── */
         .error-box {
             margin-top: 20px;
-            background: rgba(255,75,43,.08);
-            border: 1px solid rgba(255,75,43,.25);
+            background: rgba(255, 75, 43, .08);
+            border: 1px solid rgba(255, 75, 43, .25);
             border-radius: var(--radius);
             padding: 14px 16px;
             font-size: 0.88rem;
@@ -368,9 +427,19 @@
         }
 
         @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-5px);
+            }
+
+            75% {
+                transform: translateX(5px);
+            }
         }
 
         /* ── Footer ── */
@@ -387,15 +456,24 @@
         }
 
         /* ── Utilitários ── */
-        .hidden { display: none !important; }
+        .hidden {
+            display: none !important;
+        }
 
         /* ── Responsividade ── */
         @media (max-width: 480px) {
-            body { padding: 16px; }
+            body {
+                padding: 16px;
+            }
 
-            h1 { font-size: 1.8rem; }
+            h1 {
+                font-size: 1.8rem;
+            }
 
-            .card { padding: 20px; border-radius: 16px; }
+            .card {
+                padding: 20px;
+                border-radius: 16px;
+            }
 
             .input-row {
                 grid-template-columns: 1fr;
@@ -406,14 +484,17 @@
                 grid-template-columns: 1fr;
             }
 
-            .subtitle { font-size: 0.85rem; margin-bottom: 24px; }
+            .subtitle {
+                font-size: 0.85rem;
+                margin-bottom: 24px;
+            }
         }
 
         /* ── Modal de Custos ── */
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.85);
+            background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(8px);
             z-index: 100;
             display: flex;
@@ -440,13 +521,20 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
             animation: modalSlide 0.3s ease-out;
         }
 
         @keyframes modalSlide {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .modal-header {
@@ -506,17 +594,34 @@
             justify-content: space-between;
             align-items: center;
             padding: 10px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             font-size: 0.85rem;
         }
 
-        .history-item:last-child { border-bottom: none; }
+        .history-item:last-child {
+            border-bottom: none;
+        }
 
-        .history-info { display: flex; flex-direction: column; }
-        .history-date { font-size: 0.7rem; color: var(--muted); }
-        .history-model { font-weight: 600; color: var(--text); }
-        .history-price { font-weight: 700; color: var(--accent1); }
-        
+        .history-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .history-date {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .history-model {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .history-price {
+            font-weight: 700;
+            color: var(--accent1);
+        }
+
         .btn-costs-trigger {
             position: absolute;
             top: 10px;
@@ -537,491 +642,517 @@
         .btn-costs-trigger:hover {
             color: var(--text);
             border-color: var(--accent1);
-            background: rgba(255,75,43,0.1);
+            background: rgba(255, 75, 43, 0.1);
         }
     </style>
 </head>
 
 <body>
-<div class="container">
-    <div class="header-icon" style="position: relative;">
-        🎬
-        <button class="btn-costs-trigger" onclick="abrirCustos()">📊 Custos</button>
-    </div>
-    <h1>Clip Generator</h1>
-    <p class="subtitle">Crie clipes com a IA de vídeo do Google</p>
-    <div class="badge">⚡ Powered by Veo 3.1</div>
-
-    <div class="card">
-        <div class="input-group">
-            <label for="app-password">Senha de Segurança</label>
-            <input type="password" id="app-password" placeholder="Digite a senha..." value="" onchange="savePassword()">
+    <div class="container">
+        <div class="header-icon" style="position: relative;">
+            🎬
+            <button class="btn-costs-trigger" onclick="abrirCustos()">📊 Custos</button>
         </div>
+        <h1>Clip Generator</h1>
+        <p class="subtitle">Crie clipes com a IA de vídeo do Google</p>
+        <div class="badge">⚡ Powered by Veo 3.1</div>
 
-        <div class="input-group">
-            <label for="prompt">Descreva o clipe</label>
-            <textarea
-                id="prompt"
-                placeholder="Ex: Uma onda gigante quebrando em câmera lenta no pôr do sol, cinematográfico, 4K, cores vibrantes..."
-                maxlength="2000"
-                oninput="updateCharCount()"
-            ></textarea>
-            <div class="char-count"><span id="char-count">0</span>/2000</div>
-        </div>
-
-        <div class="input-group">
-            <label for="ref-image">Imagem de Referência (Opcional)</label>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <input type="file" id="ref-image" accept="image/*" style="display: none;" onchange="previewImage(this)">
-                <button type="button" class="btn-secondary" style="width: auto; padding: 8px 16px; margin: 0;" onclick="document.getElementById('ref-image').click()">
-                    📁 Escolher Imagem
-                </button>
-                <span id="file-name" style="font-size: 0.8rem; color: var(--muted);">Nenhuma imagem selecionada</span>
-            </div>
-            <div id="image-preview-container" class="hidden" style="margin-top: 12px; position: relative; width: fit-content;">
-                <img id="image-preview" src="" style="max-width: 100%; max-height: 120px; border-radius: 8px; border: 1px solid var(--border);">
-                <button type="button" style="position: absolute; top: -8px; right: -8px; background: var(--accent1); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;" onclick="removerImagem()">✕</button>
-            </div>
-        </div>
-
-        <div class="input-row">
+        <div class="card">
             <div class="input-group">
-                <label for="duration">Duração</label>
-                <select id="duration">
-                    <option value="4">4 Segundos</option>
-                    <option value="5">5 Segundos</option>
-                    <option value="6">6 Segundos</option>
-                    <option value="8" selected>8 Segundos</option>
-                </select>
+                <label for="app-password">Senha de Segurança</label>
+                <input type="password" id="app-password" placeholder="Digite a senha..." value=""
+                    onchange="savePassword()">
             </div>
 
             <div class="input-group">
-                <label for="aspect-ratio">Proporção</label>
-                <select id="aspect-ratio">
-                    <option value="16:9">🖥️ 16:9 Paisagem</option>
-                    <option value="9:16">📱 9:16 Retrato</option>
+                <label for="prompt">Descreva o clipe</label>
+                <textarea id="prompt"
+                    placeholder="Ex: Uma onda gigante quebrando em câmera lenta no pôr do sol, cinematográfico, 4K, cores vibrantes..."
+                    maxlength="2000" oninput="updateCharCount()"></textarea>
+                <div class="char-count"><span id="char-count">0</span>/2000</div>
+            </div>
+
+            <div class="input-group">
+                <label for="ref-image">Imagem de Referência (Opcional)</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="file" id="ref-image" accept="image/*" style="display: none;"
+                        onchange="previewImage(this)">
+                    <button type="button" class="btn-secondary" style="width: auto; padding: 8px 16px; margin: 0;"
+                        onclick="document.getElementById('ref-image').click()">
+                        📁 Escolher Imagem
+                    </button>
+                    <span id="file-name" style="font-size: 0.8rem; color: var(--muted);">Nenhuma imagem
+                        selecionada</span>
+                </div>
+                <div id="image-preview-container" class="hidden"
+                    style="margin-top: 12px; position: relative; width: fit-content;">
+                    <img id="image-preview" src=""
+                        style="max-width: 100%; max-height: 120px; border-radius: 8px; border: 1px solid var(--border);">
+                    <button type="button"
+                        style="position: absolute; top: -8px; right: -8px; background: var(--accent1); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;"
+                        onclick="removerImagem()">✕</button>
+                </div>
+            </div>
+
+            <div class="input-row">
+                <div class="input-group">
+                    <label for="duration">Duração</label>
+                    <select id="duration">
+                        <option value="4">4 Segundos</option>
+                        <option value="5">5 Segundos</option>
+                        <option value="6">6 Segundos</option>
+                        <option value="8" selected>8 Segundos</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label for="aspect-ratio">Proporção</label>
+                    <select id="aspect-ratio">
+                        <option value="16:9">🖥️ 16:9 Paisagem</option>
+                        <option value="9:16">📱 9:16 Retrato</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="model">Versão do Modelo (IA)</label>
+                <select id="model">
+                    <option value="veo-3.1-fast-generate-001" selected>⚡ Veo 3.1 Fast (Equilibrado - R$ 0,94/seg)
+                    </option>
+                    <option value="veo-3.1-generate-001">✨ Veo 3.1 Standard (Alta Qualidade - R$ 3,13/seg)</option>
+                    <option value="veo-2.0-generate-001">📉 Veo 2.0 (Econômico - R$ 0,63/seg)</option>
                 </select>
             </div>
+
+            <button id="btn-gerar" onclick="iniciarGeracao()">✨ Gerar Clipe</button>
         </div>
 
-        <div class="input-group">
-            <label for="model">Versão do Modelo (IA)</label>
-            <select id="model">
-                <option value="veo-3.1-fast-generate-001" selected>⚡ Veo 3.1 Fast (Equilibrado - R$ 0,83/seg)</option>
-                <option value="veo-3.1-generate-001">✨ Veo 3.1 Standard (Alta Qualidade - R$ 2,75/seg)</option>
-                <option value="veo-2.0-generate-001">📉 Veo 2.0 (Econômico - R$ 0,55/seg)</option>
-            </select>
-        </div>
-
-        <button id="btn-gerar" onclick="iniciarGeracao()">✨ Gerar Clipe</button>
-    </div>
-
-    <!-- Loading -->
-    <div id="loading" class="hidden">
-        <div class="spinner-wrap"><div class="spinner"></div></div>
-        <p id="status-msg">Iniciando...</p>
-        <p id="elapsed-time">Tempo: 0:00</p>
-        <div class="progress-bar">
-            <div class="progress-fill" id="progress-fill"></div>
-        </div>
-        <p id="progress-pct">0%</p>
-        <div class="loading-tip" id="loading-tip">
-            <strong>💡 Dica:</strong> A geração de vídeo com IA leva em média <strong>2 a 4 minutos</strong>. Fique tranquilo, está processando!
-        </div>
-    </div>
-
-    <!-- Erro -->
-    <div id="error-box" class="error-box hidden"></div>
-
-    <!-- Resultado -->
-    <div id="result" class="hidden">
-        <video id="video-player" controls loop playsinline></video>
-        <div class="result-actions">
-            <button class="btn-secondary btn-download" onclick="baixarVideo()">⬇ Download</button>
-            <button class="btn-secondary" onclick="resetar()">↩ Criar outro</button>
-        </div>
-    </div>
-
-    <!-- Modal de Custos -->
-    <div id="modal-costs" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 style="font-weight: 700;">Gestão de Custos</h3>
-                <button onclick="fecharCustos()" style="background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.5rem;">✕</button>
+        <!-- Loading -->
+        <div id="loading" class="hidden">
+            <div class="spinner-wrap">
+                <div class="spinner"></div>
             </div>
-            <div class="modal-body">
-                <div class="cost-summary">
-                    <div class="cost-card">
-                        <div class="label">Total Estimado</div>
-                        <div class="value" id="total-brl">R$ 0,00</div>
+            <p id="status-msg">Iniciando...</p>
+            <p id="elapsed-time">Tempo: 0:00</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <p id="progress-pct">0%</p>
+            <div class="loading-tip" id="loading-tip">
+                <strong>💡 Dica:</strong> A geração de vídeo com IA leva em média <strong>2 a 4 minutos</strong>. Fique
+                tranquilo, está processando!
+            </div>
+        </div>
+
+        <!-- Erro -->
+        <div id="error-box" class="error-box hidden"></div>
+
+        <!-- Resultado -->
+        <div id="result" class="hidden">
+            <video id="video-player" controls loop playsinline></video>
+            <div class="result-actions">
+                <button class="btn-secondary btn-download" onclick="baixarVideo()">⬇ Download</button>
+                <button class="btn-secondary" onclick="resetar()">↩ Criar outro</button>
+            </div>
+        </div>
+
+        <!-- Modal de Custos -->
+        <div id="modal-costs" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 style="font-weight: 700;">Gestão de Custos</h3>
+                    <button onclick="fecharCustos()"
+                        style="background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.5rem;">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="cost-summary">
+                        <div class="cost-card">
+                            <div class="label">Total Estimado</div>
+                            <div class="value" id="total-brl">R$ 0,00</div>
+                        </div>
+                        <div class="cost-card">
+                            <div class="label">Em Dólar</div>
+                            <div class="value" id="total-usd">$0.00</div>
+                        </div>
                     </div>
-                    <div class="cost-card">
-                        <div class="label">Em Dólar</div>
-                        <div class="value" id="total-usd">$0.00</div>
+
+                    <h4
+                        style="font-size: 0.8rem; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.05em;">
+                        Histórico Recente (Últimos 50)</h4>
+                    <div id="costs-history" class="history-list">
+                        <!-- Gerado via JS -->
+                        <p style="text-align: center; color: var(--muted); font-size: 0.8rem; padding: 20px;">Carregando
+                            histórico...</p>
                     </div>
                 </div>
-                
-                <h4 style="font-size: 0.8rem; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.05em;">Histórico Recente (Últimos 50)</h4>
-                <div id="costs-history" class="history-list">
-                    <!-- Gerado via JS -->
-                    <p style="text-align: center; color: var(--muted); font-size: 0.8rem; padding: 20px;">Carregando histórico...</p>
+                <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                    <button class="btn-secondary" onclick="zerarHistorico()"
+                        style="color: #ff8070; border-color: rgba(255,75,43,0.2); padding: 8px 15px; font-size: 0.75rem;">🗑
+                        Zerar Histórico</button>
+                    <button class="btn-secondary" onclick="fecharCustos()" style="padding: 8px 20px;">Fechar</button>
                 </div>
             </div>
-            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-                <button class="btn-secondary" onclick="zerarHistorico()" style="color: #ff8070; border-color: rgba(255,75,43,0.2); padding: 8px 15px; font-size: 0.75rem;">🗑 Zerar Histórico</button>
-                <button class="btn-secondary" onclick="fecharCustos()" style="padding: 8px 20px;">Fechar</button>
-            </div>
+        </div>
+
+        <div class="footer">
+            Feito com ❤️ usando <a href="https://deepmind.google/technologies/veo/" target="_blank">Google Veo 3.1</a>
         </div>
     </div>
 
-    <div class="footer">
-        Feito com ❤️ usando <a href="https://deepmind.google/technologies/veo/" target="_blank">Google Veo 3.1</a>
-    </div>
-</div>
+    <script>
+        const API = 'https://projeto-video-ia.onrender.com';
 
-<script>
-    const API = 'https://projeto-video-ia.onrender.com';
+        let pollingTimer = null;
+        let elapsedTimer = null;
+        let startTime = null;
+        let currentVideoUrl = null;
+        let currentJobParams = null; // Para guardar model/duration para o log
 
-    let pollingTimer = null;
-    let elapsedTimer = null;
-    let startTime = null;
-    let currentVideoUrl = null;
-    let currentJobParams = null; // Para guardar model/duration para o log
-
-    // Constantes de Preço (Sincronizadas com o Backend)
-    const PRICING = {
-        'veo-3.1-fast-generate-001': 0.15,
-        'veo-3.1-generate-001': 0.50,
-        'veo-2.0-generate-001': 0.10
-    };
-    const EXCHANGE_RATE = 5.50;
-
-    // Carrega senha salva
-    document.getElementById('app-password').value = localStorage.getItem('app_password') || '';
-
-    function savePassword() {
-        const pass = document.getElementById('app-password').value;
-        localStorage.setItem('app_password', pass);
-    }
-
-    const tips = [
-        '💡 <strong>Dica:</strong> A geração de vídeo com IA leva em média <strong>2 a 4 minutos</strong>. Fique tranquilo!',
-        '🎨 <strong>Dica:</strong> Quanto mais detalhado o prompt, melhor o resultado. Descreva cores, iluminação e estilo.',
-        '🎬 <strong>Dica:</strong> Use termos como "cinematográfico", "4K", "câmera lenta" para vídeos mais impactantes.',
-        '🔊 <strong>Dica:</strong> O Veo 3.1 gera <strong>áudio nativo</strong> — sons, música e até diálogos!',
-        '📱 <strong>Dica:</strong> Use 9:16 para Reels, TikTok e Shorts. Use 16:9 para YouTube e apresentações.',
-        '⚡ <strong>Dica:</strong> O modelo está processando milhões de parâmetros para criar seu vídeo único.',
-    ];
-    let tipIndex = 0;
-
-    // ── Character counter ─────────────────────────────────────────────────
-    function updateCharCount() {
-        const count = document.getElementById('prompt').value.length;
-        document.getElementById('char-count').textContent = count;
-    }
-
-    // ── Image handling ────────────────────────────────────────────────────
-    let currentImageBase64 = null;
-    let currentImageMime = null;
-
-    function previewImage(input) {
-        const file = input.files[0];
-        if (!file) return;
-
-        currentImageMime = file.type; // Captura o tipo (ex: image/jpeg)
-        document.getElementById('file-name').textContent = file.name;
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            currentImageBase64 = e.target.result.split(',')[1]; // Apenas a parte base64
-            document.getElementById('image-preview').src = e.target.result;
-            document.getElementById('image-preview-container').classList.remove('hidden');
+        // Constantes de Preço (Sincronizadas com o Backend)
+        const PRICING = {
+            'veo-3.1-fast-generate-001': 0.15,
+            'veo-3.1-generate-001': 0.50,
+            'veo-2.0-generate-001': 0.10
         };
-        reader.readAsDataURL(file);
-    }
+        const EXCHANGE_RATE = 6.25; // Taxa de 5.87 + IOF e impostos locais
 
-    function removerImagem() {
-        currentImageBase64 = null;
-        currentImageMime = null;
-        document.getElementById('ref-image').value = '';
-        document.getElementById('file-name').textContent = 'Nenhuma imagem selecionada';
-        document.getElementById('image-preview-container').classList.add('hidden');
-    }
+        // Carrega senha salva
+        document.getElementById('app-password').value = localStorage.getItem('app_password') || '';
 
-    // ── Elapsed time ──────────────────────────────────────────────────────
-    function startElapsedTimer() {
-        startTime = Date.now();
-        elapsedTimer = setInterval(() => {
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const mins = Math.floor(elapsed / 60);
-            const secs = String(elapsed % 60).padStart(2, '0');
-            document.getElementById('elapsed-time').textContent = `Tempo: ${mins}:${secs}`;
-        }, 1000);
-    }
-
-    function stopElapsedTimer() {
-        clearInterval(elapsedTimer);
-    }
-
-    // ── Rotate tips ───────────────────────────────────────────────────────
-    function rotateTips() {
-        return setInterval(() => {
-            tipIndex = (tipIndex + 1) % tips.length;
-            const tipEl = document.getElementById('loading-tip');
-            tipEl.style.opacity = '0';
-            setTimeout(() => {
-                tipEl.innerHTML = tips[tipIndex];
-                tipEl.style.opacity = '1';
-            }, 300);
-        }, 8000);
-    }
-
-    // ── Helpers de UI ─────────────────────────────────────────────────────
-    function setProgress(pct, msg) {
-        document.getElementById('progress-fill').style.width = pct + '%';
-        document.getElementById('progress-pct').textContent = Math.floor(pct) + '%';
-        if (msg) document.getElementById('status-msg').textContent = msg;
-    }
-
-    function mostrarErro(msg) {
-        const box = document.getElementById('error-box');
-        box.textContent = '❌ ' + msg;
-        box.classList.remove('hidden');
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('btn-gerar').disabled = false;
-        stopElapsedTimer();
-    }
-
-    function resetar() {
-        document.getElementById('result').classList.add('hidden');
-        document.getElementById('error-box').classList.add('hidden');
-        document.getElementById('prompt').value = '';
-        document.getElementById('char-count').textContent = '0';
-        document.getElementById('btn-gerar').disabled = false;
-        currentVideoUrl = null;
-        removerImagem(); // Limpa a imagem de referência
-    }
-
-    // ── Download ──────────────────────────────────────────────────────────
-    function baixarVideo() {
-        if (!currentVideoUrl) return;
-        const a = document.createElement('a');
-        a.href = currentVideoUrl;
-        a.download = 'clip-ia.mp4';
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-    }
-
-    // ── Início ────────────────────────────────────────────────────────────
-    async function iniciarGeracao() {
-        const prompt      = document.getElementById('prompt').value.trim();
-        const duration    = document.getElementById('duration').value;
-        const aspectRatio = document.getElementById('aspect-ratio').value;
-        const password    = document.getElementById('app-password').value;
-        const model       = document.getElementById('model').value;
-
-        if (!password) {
-            alert('Por favor, insira a senha de segurança!');
-            return;
+        function savePassword() {
+            const pass = document.getElementById('app-password').value;
+            localStorage.setItem('app_password', pass);
         }
 
-        if (!prompt) {
-            alert('Por favor, descreva o clipe antes de gerar!');
-            return;
+        const tips = [
+            '💡 <strong>Dica:</strong> A geração de vídeo com IA leva em média <strong>2 a 4 minutos</strong>. Fique tranquilo!',
+            '🎨 <strong>Dica:</strong> Quanto mais detalhado o prompt, melhor o resultado. Descreva cores, iluminação e estilo.',
+            '🎬 <strong>Dica:</strong> Use termos como "cinematográfico", "4K", "câmera lenta" para vídeos mais impactantes.',
+            '🔊 <strong>Dica:</strong> O Veo 3.1 gera <strong>áudio nativo</strong> — sons, música e até diálogos!',
+            '📱 <strong>Dica:</strong> Use 9:16 para Reels, TikTok e Shorts. Use 16:9 para YouTube e apresentações.',
+            '⚡ <strong>Dica:</strong> O modelo está processando milhões de parâmetros para criar seu vídeo único.',
+        ];
+        let tipIndex = 0;
+
+        // ── Character counter ─────────────────────────────────────────────────
+        function updateCharCount() {
+            const count = document.getElementById('prompt').value.length;
+            document.getElementById('char-count').textContent = count;
         }
 
-        // Reset visual
-        document.getElementById('btn-gerar').disabled = true;
-        document.getElementById('loading').classList.remove('hidden');
-        document.getElementById('result').classList.add('hidden');
-        document.getElementById('error-box').classList.add('hidden');
-        setProgress(3, 'Acordando o servidor...');
-        startElapsedTimer();
+        // ── Image handling ────────────────────────────────────────────────────
+        let currentImageBase64 = null;
+        let currentImageMime = null;
 
-        const tipTimer = rotateTips();
+        function previewImage(input) {
+            const file = input.files[0];
+            if (!file) return;
 
-        // Tenta conectar com retry (Render free tier pode demorar ~30s para acordar)
-        let res, data;
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-                setProgress(3 + attempt * 2, attempt > 1
-                    ? `Reconectando... (tentativa ${attempt}/3)`
-                    : 'Conectando ao servidor...');
+            currentImageMime = file.type; // Captura o tipo (ex: image/jpeg)
+            document.getElementById('file-name').textContent = file.name;
 
-                res = await fetch(`${API}/generate`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'X-Password': password
-                    },
-                    body: JSON.stringify({ 
-                        prompt, 
-                        duration, 
-                        aspect_ratio: aspectRatio,
-                        model: model,
-                        image: currentImageBase64,
-                        mimeType: currentImageMime
-                    }),
-                });
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                currentImageBase64 = e.target.result.split(',')[1]; // Apenas a parte base64
+                document.getElementById('image-preview').src = e.target.result;
+                document.getElementById('image-preview-container').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
 
-                data = await res.json();
-                
-                // Salva parâmetros para logar no sucesso
-                currentJobParams = { 
-                    prompt, 
-                    duration, 
-                    model, 
-                    job_id: data.job_id 
-                };
+        function removerImagem() {
+            currentImageBase64 = null;
+            currentImageMime = null;
+            document.getElementById('ref-image').value = '';
+            document.getElementById('file-name').textContent = 'Nenhuma imagem selecionada';
+            document.getElementById('image-preview-container').classList.add('hidden');
+        }
 
-                break; // sucesso
+        // ── Elapsed time ──────────────────────────────────────────────────────
+        function startElapsedTimer() {
+            startTime = Date.now();
+            elapsedTimer = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const mins = Math.floor(elapsed / 60);
+                const secs = String(elapsed % 60).padStart(2, '0');
+                document.getElementById('elapsed-time').textContent = `Tempo: ${mins}:${secs}`;
+            }, 1000);
+        }
 
-            } catch (e) {
-                console.warn(`[Tentativa ${attempt}/3] Erro de conexão:`, e);
-                if (attempt === 3) {
-                    clearInterval(tipTimer);
-                    mostrarErro('Não foi possível conectar ao servidor. O backend pode estar offline. Tente novamente em 30 segundos.');
-                    return;
-                }
-                // Aguarda antes de tentar novamente
-                await new Promise(r => setTimeout(r, 5000));
+        function stopElapsedTimer() {
+            clearInterval(elapsedTimer);
+        }
+
+        // ── Rotate tips ───────────────────────────────────────────────────────
+        function rotateTips() {
+            return setInterval(() => {
+                tipIndex = (tipIndex + 1) % tips.length;
+                const tipEl = document.getElementById('loading-tip');
+                tipEl.style.opacity = '0';
+                setTimeout(() => {
+                    tipEl.innerHTML = tips[tipIndex];
+                    tipEl.style.opacity = '1';
+                }, 300);
+            }, 8000);
+        }
+
+        // ── Helpers de UI ─────────────────────────────────────────────────────
+        function setProgress(pct, msg) {
+            document.getElementById('progress-fill').style.width = pct + '%';
+            document.getElementById('progress-pct').textContent = Math.floor(pct) + '%';
+            if (msg) document.getElementById('status-msg').textContent = msg;
+        }
+
+        function mostrarErro(msg) {
+            const box = document.getElementById('error-box');
+            box.textContent = '❌ ' + msg;
+            box.classList.remove('hidden');
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('btn-gerar').disabled = false;
+            stopElapsedTimer();
+        }
+
+        function resetar() {
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('error-box').classList.add('hidden');
+            document.getElementById('prompt').value = '';
+            document.getElementById('char-count').textContent = '0';
+            document.getElementById('btn-gerar').disabled = false;
+            currentVideoUrl = null;
+            removerImagem(); // Limpa a imagem de referência
+        }
+
+        // ── Download ──────────────────────────────────────────────────────────
+        function baixarVideo() {
+            if (!currentVideoUrl) return;
+            const a = document.createElement('a');
+            a.href = currentVideoUrl;
+            a.download = 'clip-ia.mp4';
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // ── Início ────────────────────────────────────────────────────────────
+        async function iniciarGeracao() {
+            const prompt = document.getElementById('prompt').value.trim();
+            const duration = document.getElementById('duration').value;
+            const aspectRatio = document.getElementById('aspect-ratio').value;
+            const password = document.getElementById('app-password').value;
+            const model = document.getElementById('model').value;
+
+            if (!password) {
+                alert('Por favor, insira a senha de segurança!');
+                return;
             }
-        }
 
-        if (!res.ok || data.error) {
-            clearInterval(tipTimer);
-            mostrarErro(data.error || 'Erro ao iniciar a geração.');
-            return;
-        }
+            if (!prompt) {
+                alert('Por favor, descreva o clipe antes de gerar!');
+                return;
+            }
 
-        // Começa polling
-        setProgress(10, 'Solicitação enviada! Aguardando IA...');
-        aguardarJob(data.job_id, tipTimer, password);
-    }
+            // Reset visual
+            document.getElementById('btn-gerar').disabled = true;
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('error-box').classList.add('hidden');
+            setProgress(3, 'Acordando o servidor...');
+            startElapsedTimer();
 
-    // ── Polling ───────────────────────────────────────────────────────────
-    let pollErrorCount = 0;
-    const MAX_POLL_ERRORS = 5;
+            const tipTimer = rotateTips();
 
-    function aguardarJob(jobId, tipTimer, password) {
-        pollErrorCount = 0;
+            // Tenta conectar com retry (Render free tier pode demorar ~30s para acordar)
+            let res, data;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    setProgress(3 + attempt * 2, attempt > 1
+                        ? `Reconectando... (tentativa ${attempt}/3)`
+                        : 'Conectando ao servidor...');
 
-        pollingTimer = setInterval(async () => {
-            try {
-                const res  = await fetch(`${API}/status/${jobId}`, {
-                    headers: { 'X-Password': password }
-                });
-                const data = await res.json();
-                pollErrorCount = 0; // reset on success
+                    res = await fetch(`${API}/generate`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Password': password
+                        },
+                        body: JSON.stringify({
+                            prompt,
+                            duration,
+                            aspect_ratio: aspectRatio,
+                            model: model,
+                            image: currentImageBase64,
+                            mimeType: currentImageMime
+                        }),
+                    });
 
-                if (data.status === 'done') {
-                    clearInterval(pollingTimer);
-                    clearInterval(tipTimer);
-                    stopElapsedTimer();
-                    setProgress(100, '🎉 Concluído!');
+                    data = await res.json();
 
-                    // Registrar no LocalStorage
-                    salvarCustoLocal(currentJobParams);
+                    // Salva parâmetros para logar no sucesso
+                    currentJobParams = {
+                        prompt,
+                        duration,
+                        model,
+                        job_id: data.job_id
+                    };
 
-                    setTimeout(() => {
-                        document.getElementById('loading').classList.add('hidden');
-                        const player = document.getElementById('video-player');
-                        currentVideoUrl = `${API}${data.video_url}?password=${encodeURIComponent(password)}`;
-                        player.src = currentVideoUrl;
-                        document.getElementById('result').classList.remove('hidden');
-                    }, 600);
+                    break; // sucesso
 
-                } else if (data.status === 'error') {
-                    clearInterval(pollingTimer);
-                    clearInterval(tipTimer);
-                    mostrarErro(data.error || 'Ocorreu um erro na geração.');
-
-                } else {
-                    // processing | queued
-                    setProgress(data.progress || 10, data.message || 'Processando...');
-                }
-
-            } catch (e) {
-                pollErrorCount++;
-                console.warn(`[Polling] Erro ${pollErrorCount}/${MAX_POLL_ERRORS}:`, e);
-
-                if (pollErrorCount >= MAX_POLL_ERRORS) {
-                    clearInterval(pollingTimer);
-                    clearInterval(tipTimer);
-                    mostrarErro('Perda de conexão ao verificar o status do job. Verifique sua internet e tente novamente.');
-                } else {
-                    // Mostra feedback visual mas continua tentando
-                    document.getElementById('status-msg').textContent = `Reconectando... (${pollErrorCount}/${MAX_POLL_ERRORS})`;
+                } catch (e) {
+                    console.warn(`[Tentativa ${attempt}/3] Erro de conexão:`, e);
+                    if (attempt === 3) {
+                        clearInterval(tipTimer);
+                        mostrarErro('Não foi possível conectar ao servidor. O backend pode estar offline. Tente novamente em 30 segundos.');
+                        return;
+                    }
+                    // Aguarda antes de tentar novamente
+                    await new Promise(r => setTimeout(r, 5000));
                 }
             }
-        }, 3000); // verifica a cada 3 segundos
-    }
 
-    // ── Custos (Persistência Local) ───────────────────────────────────────
-    
-    function salvarCustoLocal(params) {
-        if (!params) return;
-        
-        const pricePerSec = PRICING[params.model] || 0.15;
-        const costUsd = pricePerSec * params.duration;
-        const costBrl = costUsd * EXCHANGE_RATE;
-        
-        const entry = {
-            timestamp: new Date().toISOString(),
-            job_id: params.job_id,
-            prompt: params.prompt,
-            model: params.model,
-            duration: params.duration,
-            cost_usd: costUsd,
-            cost_brl: costBrl
-        };
-        
-        let history = JSON.parse(localStorage.getItem('usage_history') || '[]');
-        history.push(entry);
-        localStorage.setItem('usage_history', JSON.stringify(history));
-        console.log("Custo salvo localmente:", entry);
-    }
+            if (!res.ok || data.error) {
+                clearInterval(tipTimer);
+                mostrarErro(data.error || 'Erro ao iniciar a geração.');
+                return;
+            }
 
-    function abrirCustos() {
-        document.getElementById('modal-costs').classList.add('active');
-        atualizarTelaCustos();
-    }
-
-    function atualizarTelaCustos() {
-        const history = JSON.parse(localStorage.getItem('usage_history') || '[]');
-        
-        const totalBrl = history.reduce((sum, item) => sum + (item.cost_brl || 0), 0);
-        const totalUsd = history.reduce((sum, item) => sum + (item.cost_usd || 0), 0);
-
-        document.getElementById('total-brl').textContent = `R$ ${totalBrl.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        document.getElementById('total-usd').textContent = `$${totalUsd.toFixed(2)}`;
-
-        const historyEl = document.getElementById('costs-history');
-        if (history.length === 0) {
-            historyEl.innerHTML = `<p style="text-align: center; color: var(--muted); font-size: 0.8rem; padding: 20px;">Nenhum registro encontrado no seu navegador.</p>`;
-            return;
+            // Começa polling
+            setProgress(10, 'Solicitação enviada! Aguardando IA...');
+            aguardarJob(data.job_id, tipTimer, password);
         }
 
-        historyEl.innerHTML = [...history].reverse().slice(0, 50).map(item => {
-            const date = new Date(item.timestamp).toLocaleString('pt-BR', {
-                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-            });
-            
-            // Lógica melhorada para os nomes
-            let modelLabel = '🤖 IA';
-            if (item.model.includes('fast')) modelLabel = '⚡ Fast';
-            else if (item.model.includes('veo-2.0')) modelLabel = '📉 Veo 2.0';
-            else if (item.model === 'veo-3.1-generate-001') modelLabel = '✨ Standard';
+        // ── Polling ───────────────────────────────────────────────────────────
+        let pollErrorCount = 0;
+        const MAX_POLL_ERRORS = 5;
 
-            const promptClipping = item.prompt || 'Sem descrição';
-            
-            return `
+        function aguardarJob(jobId, tipTimer, password) {
+            pollErrorCount = 0;
+
+            pollingTimer = setInterval(async () => {
+                try {
+                    const res = await fetch(`${API}/status/${jobId}`, {
+                        headers: { 'X-Password': password }
+                    });
+                    const data = await res.json();
+                    pollErrorCount = 0; // reset on success
+
+                    if (data.status === 'done') {
+                        clearInterval(pollingTimer);
+                        clearInterval(tipTimer);
+                        stopElapsedTimer();
+                        setProgress(100, '🎉 Concluído!');
+
+                        // Registrar no LocalStorage
+                        salvarCustoLocal(currentJobParams);
+
+                        setTimeout(() => {
+                            document.getElementById('loading').classList.add('hidden');
+                            const player = document.getElementById('video-player');
+                            currentVideoUrl = `${API}${data.video_url}?password=${encodeURIComponent(password)}`;
+                            player.src = currentVideoUrl;
+                            document.getElementById('result').classList.remove('hidden');
+                        }, 600);
+
+                    } else if (data.status === 'error') {
+                        clearInterval(pollingTimer);
+                        clearInterval(tipTimer);
+                        mostrarErro(data.error || 'Ocorreu um erro na geração.');
+
+                        // Registrar custo de falha (pois o Google pode cobrar o processamento parcial)
+                        if (currentJobParams) {
+                            const status = data.error && data.error.includes('bloqueou') ? 'safety_blocked' : 'error';
+                            salvarCustoLocal({ ...currentJobParams, status });
+                        }
+
+                    } else {
+                        // processing | queued
+                        setProgress(data.progress || 10, data.message || 'Processando...');
+                    }
+
+                } catch (e) {
+                    pollErrorCount++;
+                    console.warn(`[Polling] Erro ${pollErrorCount}/${MAX_POLL_ERRORS}:`, e);
+
+                    if (pollErrorCount >= MAX_POLL_ERRORS) {
+                        clearInterval(pollingTimer);
+                        clearInterval(tipTimer);
+                        mostrarErro('Perda de conexão ao verificar o status do job. Verifique sua internet e tente novamente.');
+                    } else {
+                        // Mostra feedback visual mas continua tentando
+                        document.getElementById('status-msg').textContent = `Reconectando... (${pollErrorCount}/${MAX_POLL_ERRORS})`;
+                    }
+                }
+            }, 3000); // verifica a cada 3 segundos
+        }
+
+        // ── Custos (Persistência Local) ───────────────────────────────────────
+
+        function salvarCustoLocal(params) {
+            if (!params) return;
+
+            const pricePerSec = PRICING[params.model] || 0.15;
+            const costUsd = pricePerSec * params.duration;
+            const costBrl = costUsd * EXCHANGE_RATE;
+
+            const entry = {
+                timestamp: new Date().toISOString(),
+                job_id: params.job_id,
+                prompt: params.prompt,
+                model: params.model,
+                duration: params.duration,
+                cost_usd: costUsd,
+                cost_brl: costBrl,
+                status: params.status || 'success'
+            };
+
+            let history = JSON.parse(localStorage.getItem('usage_history') || '[]');
+            history.push(entry);
+            localStorage.setItem('usage_history', JSON.stringify(history));
+            console.log("Custo salvo localmente:", entry);
+        }
+
+        function abrirCustos() {
+            document.getElementById('modal-costs').classList.add('active');
+            atualizarTelaCustos();
+        }
+
+        function atualizarTelaCustos() {
+            const history = JSON.parse(localStorage.getItem('usage_history') || '[]');
+
+            const totalBrl = history.reduce((sum, item) => sum + (item.cost_brl || 0), 0);
+            const totalUsd = history.reduce((sum, item) => sum + (item.cost_usd || 0), 0);
+
+            document.getElementById('total-brl').textContent = `R$ ${totalBrl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            document.getElementById('total-usd').textContent = `$${totalUsd.toFixed(2)}`;
+
+            const historyEl = document.getElementById('costs-history');
+            if (history.length === 0) {
+                historyEl.innerHTML = `<p style="text-align: center; color: var(--muted); font-size: 0.8rem; padding: 20px;">Nenhum registro encontrado no seu navegador.</p>`;
+                return;
+            }
+
+            historyEl.innerHTML = [...history].reverse().slice(0, 50).map(item => {
+                const date = new Date(item.timestamp).toLocaleString('pt-BR', {
+                    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                });
+
+                // Lógica melhorada para os nomes e status
+                let modelLabel = '🤖 IA';
+                if (item.model.includes('fast')) modelLabel = '⚡ Fast';
+                else if (item.model.includes('veo-2.0')) modelLabel = '📉 Veo 2.0';
+                else if (item.model === 'veo-3.1-generate-001') modelLabel = '✨ Standard';
+
+                let statusIcon = '';
+                if (item.status === 'safety_blocked') statusIcon = ' 🛡️ (Bloqueado)';
+                else if (item.status && item.status.startsWith('error')) statusIcon = ' ⚠️ (Erro)';
+
+                const promptClipping = item.prompt || 'Sem descrição';
+
+                return `
                 <div class="history-item" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 0;">
                     <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
                         <div class="history-info">
-                            <span class="history-model">${modelLabel} (${item.duration}s)</span>
+                            <span class="history-model">${modelLabel}${statusIcon} (${item.duration}s)</span>
                             <span class="history-date">${date}</span>
                         </div>
                         <span class="history-price">R$ ${item.cost_brl.toFixed(2)}</span>
@@ -1031,19 +1162,20 @@
                     </div>
                 </div>
             `;
-        }).join('');
-    }
-
-    function zerarHistorico() {
-        if (confirm('Deseja realmente apagar todo o histórico de custos salvo neste navegador? Esta ação não pode ser desfeita.')) {
-            localStorage.removeItem('usage_history');
-            atualizarTelaCustos();
+            }).join('');
         }
-    }
 
-    function fecharCustos() {
-        document.getElementById('modal-costs').classList.remove('active');
-    }
-</script>
+        function zerarHistorico() {
+            if (confirm('Deseja realmente apagar todo o histórico de custos salvo neste navegador? Esta ação não pode ser desfeita.')) {
+                localStorage.removeItem('usage_history');
+                atualizarTelaCustos();
+            }
+        }
+
+        function fecharCustos() {
+            document.getElementById('modal-costs').classList.remove('active');
+        }
+    </script>
 </body>
+
 </html>
