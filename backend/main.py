@@ -55,9 +55,14 @@ COST_LOG_FILE = "usage_log.json"
 # Cache simples para evitar gerações duplicadas em retentativas rápidas
 active_prompts = {}
 
+# Configuração de Impostos (IOF + Taxas locais)
+TAX_RATE = 1.0638  # IOF de 6.38% (comum em cartões internacionais)
+    
 def log_usage(model, duration, prompt="", job_id="", status="success"):
     """Registra o uso e calcula o custo estimado com detalhes do vídeo."""
-    cost_usd = PRICING.get(model, 0.15) * duration
+    base_cost_usd = PRICING.get(model, 0.15) * duration
+    # Custo com IOF aplicado ao dólar antes da conversão
+    cost_usd = base_cost_usd * TAX_RATE
     cost_brl = cost_usd * EXCHANGE_RATE
     
     entry = {
@@ -67,7 +72,9 @@ def log_usage(model, duration, prompt="", job_id="", status="success"):
         "model": model,
         "duration": duration,
         "status": status,
-        "cost_usd": round(cost_usd, 4),
+        "base_cost_usd": round(base_cost_usd, 4),
+        "tax_iof": round(base_cost_usd * (TAX_RATE - 1), 4),
+        "total_cost_usd": round(cost_usd, 4),
         "cost_brl": round(cost_brl, 2)
     }
     
@@ -231,7 +238,11 @@ def gerar_video(job_id: str, prompt: str, duration: int, aspect_ratio: str, mode
 
         jobs[job_id].update({"progress": 25, "message": msg_envio})
 
-        # ── 1. Dispara a geração ──────────────────────────────────────────
+        # Limpa a imagem da memória do job assim que disparar o envio, 
+        # para economizar RAM e não enviar de volta no polling de status
+        if "reference_image" in jobs[job_id]:
+            jobs[job_id]["reference_image"] = "[ENVIADO]"
+         # ── 1. Dispara a geração ──────────────────────────────────────────
         payload = {
             "instances": [instance],
             "parameters": {
@@ -536,8 +547,12 @@ def status(job_id):
     job = jobs.get(job_id)
     if not job:
         return jsonify({"error": "Job não encontrado."}), 404
-    return jsonify(job)
-
+        
+    # Cria uma cópia para não enviar dados pesados como a imagem de volta no polling
+    status_response = {k: v for k, v in job.items() if k != "reference_image"}
+    
+    return jsonify(status_response)
+    
 
 @app.route("/video/<job_id>", methods=["GET"])
 def serve_video(job_id):

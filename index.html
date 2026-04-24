@@ -789,7 +789,10 @@
                     <button class="btn-secondary" onclick="zerarHistorico()"
                         style="color: #ff8070; border-color: rgba(255,75,43,0.2); padding: 8px 15px; font-size: 0.75rem;">🗑
                         Zerar Histórico</button>
-                    <button class="btn-secondary" onclick="fecharCustos()" style="padding: 8px 20px;">Fechar</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn-secondary" onclick="exportarCSV()" style="padding: 8px 15px; font-size: 0.75rem;">📥 Exportar CSV</button>
+                        <button class="btn-secondary" onclick="fecharCustos()" style="padding: 8px 20px;">Fechar</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -814,9 +817,9 @@
             'veo-3.1-generate-001': 0.50,
             'veo-2.0-generate-001': 0.10
         };
-        const EXCHANGE_RATE = 6.25; // Taxa de 5.87 + IOF e impostos locais
-
-        // Carrega senha salva
+        const EXCHANGE_RATE = 6.25; // Taxa estimada em reais
+        const TAX_RATE = 1.0638;    // IOF de 6.38% (Transação Internacional)
+         // Carrega senha salva
         document.getElementById('app-password').value = localStorage.getItem('app_password') || '';
 
         function savePassword() {
@@ -1082,7 +1085,7 @@
                         document.getElementById('status-msg').textContent = `Reconectando... (${pollErrorCount}/${MAX_POLL_ERRORS})`;
                     }
                 }
-            }, 3000); // verifica a cada 3 segundos
+            }, 8000); // verifica a cada 8 segundos (economiza banda e bateria)
         }
 
         // ── Custos (Persistência Local) ───────────────────────────────────────
@@ -1090,9 +1093,10 @@
         function salvarCustoLocal(params) {
             if (!params) return;
 
-            const pricePerSec = PRICING[params.model] || 0.15;
-            const costUsd = pricePerSec * params.duration;
-            const costBrl = costUsd * EXCHANGE_RATE;
+            const basePricePerSec = PRICING[params.model] || 0.15;
+            const baseCostUsd = basePricePerSec * params.duration;
+            const totalCostUsd = baseCostUsd * TAX_RATE;
+            const costBrl = totalCostUsd * EXCHANGE_RATE;
 
             const entry = {
                 timestamp: new Date().toISOString(),
@@ -1100,7 +1104,7 @@
                 prompt: params.prompt,
                 model: params.model,
                 duration: params.duration,
-                cost_usd: costUsd,
+                cost_usd: totalCostUsd,
                 cost_brl: costBrl,
                 status: params.status || 'success'
             };
@@ -1120,12 +1124,11 @@
             const history = JSON.parse(localStorage.getItem('usage_history') || '[]');
 
             const totalBrl = history.reduce((sum, item) => sum + (item.cost_brl || 0), 0);
-            const totalUsd = history.reduce((sum, item) => sum + (item.cost_usd || 0), 0);
+            const totalUsd = history.reduce((sum, item) => sum + (item.cost_usd || item.total_cost_usd || 0), 0);
 
             document.getElementById('total-brl').textContent = `R$ ${totalBrl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-            document.getElementById('total-usd').textContent = `$${totalUsd.toFixed(2)}`;
-
-            const historyEl = document.getElementById('costs-history');
+            document.getElementById('total-usd').textContent = `$${totalUsd.toFixed(2)} (inc. IOF)`;
+             const historyEl = document.getElementById('costs-history');
             if (history.length === 0) {
                 historyEl.innerHTML = `<p style="text-align: center; color: var(--muted); font-size: 0.8rem; padding: 20px;">Nenhum registro encontrado no seu navegador.</p>`;
                 return;
@@ -1174,6 +1177,40 @@
 
         function fecharCustos() {
             document.getElementById('modal-costs').classList.remove('active');
+        }
+
+        function exportarCSV() {
+            const history = JSON.parse(localStorage.getItem('usage_history') || '[]');
+            if (history.length === 0) {
+                alert('Não há dados para exportar.');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Data,ID do Job,Modelo,Duracao(s),Custo(USD),Custo(BRL),Status,Prompt\r\n";
+
+            history.forEach(item => {
+                const date = new Date(item.timestamp).toLocaleString('pt-BR');
+                const row = [
+                    `"${date}"`,
+                    `"${item.job_id}"`,
+                    `"${item.model}"`,
+                    item.duration,
+                    item.cost_usd.toFixed(4),
+                    item.cost_brl.toFixed(2),
+                    `"${item.status}"`,
+                    `"${(item.prompt || '').replace(/"/g, '""')}"`
+                ].join(",");
+                csvContent += row + "\r\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `historico_custos_veo_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     </script>
 </body>
